@@ -6,7 +6,7 @@ import copy
 import torch
 from typing import *
 from unifold.data import utils
-from unifold.data.ops import NumpyDict, TorchDict
+from unifold.data.data_ops import NumpyDict, TorchDict
 from unifold.data.process import process_features, process_labels
 from unifold.data.process_multimer import (
     pair_and_merge,
