@@ -57,21 +57,64 @@ For monomer prediction, each fasta file shall contain only one sequence; for mul
 
 ## Uni-Fold outputs
 
-[Explanations on Uni-Fold Outputs]
+The outputs of Uni-Fold inferences contain the predicted structures in `*.pdb` files. Besides, other outputs are dumped in `*.pkl.gz` files. We summarize the confidence metrics, namely `plddt` and `iptm+ptm` in `*.json` files.
 
 ## Training Uni-Fold
 
-### Monomer Model
+Training Uni-Fold relies on pre-calculated features of proteins. We provide a demo dataset in the [example data](example_data) folder. A larger dataset will be released soon.
 
-Run the following command to train the multimer model:
+### Demo case
+
+To start with, we provide a demo script to train the monomer/multimer system of Uni-Fold:
 
 ```bash
-
+bash train_monomer_demo.sh .
 ```
 
-### Multimer Model
+and
 
-[Train multimer code]
+```bash
+bash train_multimer_demo.sh .
+```
+
+This command starts a training process on the [demo data](example_data) included in this repository. Note that this demo script only tests the correctness of package installation and does not reflect any true performances. 
+
+
+### From-scratch Training
+
+Run the following command to train Uni-Fold Monomer/Multimer from-scratch:
+
+```bash
+bash train_monomer.sh \                 # train_multimer.sh for multimer
+    /path/to/training/data/directory/ \ # dataset directory
+    /path/to/output/directory/ \        # output directory where parameters are stored
+    model_2_af2                         # model name
+```
+
+Notice that: 
+
+1. The dataset directory should be configurated in a similar way as [example data](example_data).
+2. The output directory should have enough space to store model parameters (~3GB per checkpoint, so empirically >100GB satisfies).
+3. We provide several default model names in [config.py](unifold/config.py), namely `model_1`, `model_2`, `model_2_af2` etc. for monomer models and `multimer`, `multimer_af2` etc. for multimer models. Check `model_config()` function for the differences between model names. You may also personalize your own model by modifying the function (i.e. forking the if-elses).
+
+
+### Finetuning
+
+Run the following command to finetune Uni-Fold Monomer/Multimer pretrained models:
+
+```bash
+bash finetune_monomer.sh \              # finetune_multimer.sh for multimer
+    /path/to/training/data/directory/ \ # dataset directory
+    /path/to/output/directory/ \        # output directory where parameters are stored
+    /path/to/pretrained/parameters.pt \ # pretrained parameters
+    model_2_af2                         # model name
+```
+
+Besides the notices in the previous section, additionaly notice that: 
+
+1. The model architecture should be correctly specified by the model name.
+2. Checkpoints must be in Uni-Fold format (`*.pt`).
+
 
 ## Citing this work
 
@@ -85,7 +128,7 @@ Citation is coming soon :)
 
 ## Acknowledgements
 
-Our training framework is based on [Uni-Core](https://github.com/dptech-corp/Uni-Core/), and fused operators are from [fused_ops](https://github.com/guolinke/fused_ops/). Some of the PyTorch implementations refer to an early version of [OpenFold](https://github.com/aqlaboratory/openfold), while mostly follow the original codes of [AlphaFold](https://github.com/deepmind/alphafold/). For the data processing part, we follow [AlphaFold](https://github.com/deepmind/alphafold/), and use [Biopython](https://biopython.org/), [HH-suite3](https://github.com/soedinglab/hh-suite/), [HMMER](http://eddylab.org/software/hmmer/), [Kalign](https://msa.sbc.su.se/cgi-bin/msa.cgi), [pandas](https://pandas.pydata.org/), [NumPy](https://numpy.org/), and [SciPy](https://scipy.org/).
+Our training framework is based on [Uni-Core](https://github.com/dptech-corp/Uni-Core/). Implementation of fused operators referred to  [fused_ops](https://github.com/guolinke/fused_ops/). We partly referred to an early version of [OpenFold](https://github.com/aqlaboratory/openfold) for some of the PyTorch implementation, while mostly followed the original code of [AlphaFold](https://github.com/deepmind/alphafold/). For the data processing part, we followed [AlphaFold](https://github.com/deepmind/alphafold/), and referred to utilities in [Biopython](https://biopython.org/), [HH-suite3](https://github.com/soedinglab/hh-suite/), [HMMER](http://eddylab.org/software/hmmer/), [Kalign](https://msa.sbc.su.se/cgi-bin/msa.cgi), [pandas](https://pandas.pydata.org/), [NumPy](https://numpy.org/), and [SciPy](https://scipy.org/).
 
 ## License and Disclaimer
 
