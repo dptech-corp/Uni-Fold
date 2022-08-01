@@ -2,7 +2,7 @@
 
 We proudly present Uni-Fold as a thoroughly open-source platform for developing protein models beyond [AlphaFold](https://github.com/deepmind/alphafold/). Uni-Fold introduces the following features:
 
-- Reimplemented AlphaFold and AlphaFold-Multimer models in PyTorch framework.
+- Reimplemented AlphaFold and AlphaFold-Multimer models in PyTorch framework. This is currently the first (if any else) open-source repository that supports training AlphaFold-Multimer
 
 - Model correctness proved by successful from-scratch training with equivalent accuracy, both monomer and multimer included.
 
