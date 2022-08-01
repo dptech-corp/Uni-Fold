@@ -18,7 +18,7 @@ import collections
 from typing import Dict, Iterable, List, Sequence
 
 from .residue_constants import restypes_with_x_and_gap
-from .ops import NumpyDict
+from .data_ops import NumpyDict
 import numpy as np
 import pandas as pd
 import scipy.linalg
