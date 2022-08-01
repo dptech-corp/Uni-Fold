@@ -15,6 +15,8 @@ The name Uni-Fold is inherited from Uni-Fold-JAX. First released on Dec 8 2021, 
 
 ## Installation
 
+[Instructions on installation]
+
 
 ## Preparing the datasets
 
@@ -39,19 +41,19 @@ Parameters are coming soon :)
 
 ## Running Uni-Fold
 
-After properly configurating the environment and databases, run the following command to predict the structure of the input fasta:
+After properly configurating the environment and databases, run the following command to predict the structure of the target fasta:
 
 ```bash
 bash run_unifold.sh \
-    path/to/the/input.fasta \           # fasta_path
-    path/to/the/output/directory/ \     # output_dir_base
-    path/to/the/databases \             # database_dir
-    2020-05-01 \                        # max_template_date
-    model_2_af2 \                       # model_name
-    path/to/model_parameters.pt         # param_path
+    /path/to/the/input.fasta \        # target fasta file
+    /path/to/the/output/directory/ \  # output directory
+    /path/to/database/directory/ \    # directory of databases
+    2020-05-01 \                      # use templates before this date
+    model_2_af2 \                     # specify model name
+    /path/to/model_parameters.pt      # model parameters
 ```
 
-[More descriptions for model names and ckp names]
+For monomer prediction, each fasta file shall contain only one sequence; for multimer prediction, the input fasta file shall contain all sequences of the target complex, **with duplicated homologous sequences**.
 
 ## Uni-Fold outputs
 
@@ -61,8 +63,11 @@ bash run_unifold.sh \
 
 ### Monomer Model
 
+[Train monomer code]
+
 ### Multimer Model
 
+[Train multimer code]
 
 ## Citing this work
 
@@ -81,9 +86,10 @@ Our training framework is based on [Uni-Core](https://github.com/dptech-corp/Uni
 ## License and Disclaimer
 
 Copyright 2022 DP Technology.
+
 ### Uni-Fold Code License
 
-Follow AlphaFold, Uni-Fold is licensed under permissive Apache Licence, Version 2.0.
+Uni-Fold is licensed under permissive Apache Licence, Version 2.0.
 
 ### Model Parameters License
 
