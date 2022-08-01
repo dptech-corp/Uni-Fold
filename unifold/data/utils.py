@@ -8,7 +8,7 @@ from scipy import sparse as sp
 from typing import *
 
 from . import residue_constants as rc
-from .ops import NumpyDict
+from .data_ops import NumpyDict
 
 
 def lru_cache(maxsize=16, typed=False, copy=False, deepcopy=False):
