@@ -1,4 +1,4 @@
-# Uni-Fold: an open-source platform for developing protein folding models beyond AlphaFold.
+# Uni-Fold: an open-source platform for developing protein models beyond AlphaFold.
 
 Uni-Fold is a thoroughly open-source platform for developing protein folding models beyond [AlphaFold](https://github.com/deepmind/alphafold/), with following advantages:
 
