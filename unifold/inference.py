@@ -1,4 +1,5 @@
 import argparse
+import gzip
 import logging
 import numpy as np
 import os
@@ -6,6 +7,7 @@ import os
 import time
 import torch
 import json
+import pickle
 from unifold.config import model_config
 from unifold.modules.alphafold import AlphaFold
 from unifold.data import residue_constants, protein
@@ -143,13 +145,16 @@ def main(args):
             features=batch, result=out, b_factors=plddt_b_factors
         )
         cur_save_name = (
-            f"{args.model_name}_{cur_param_path_postfix}_{cur_seed}{name_postfix}.pdb"
+            f"{args.model_name}_{cur_param_path_postfix}_{cur_seed}{name_postfix}"
         )
         plddts[cur_save_name] = str(mean_plddt)
         if is_multimer:
             ptms[cur_save_name] = str(np.mean(out["iptm+ptm"]))
-        with open(os.path.join(output_dir, cur_save_name), "w") as f:
+        with open(os.path.join(output_dir, cur_save_name + '.pdb'), "w") as f:
             f.write(protein.to_pdb(cur_protein))
+        with gzip.open(os.path.join(output_dir, cur_save_name + '_outputs.pkl.gz'), 'wb') as f:
+            pickle.dump(out, f)
+
     print("plddts", plddts)
     score_name = f"{args.model_name}_{cur_param_path_postfix}_{args.data_random_seed}_{args.times}{name_postfix}"
     plddt_fname = score_name + "_plddt.json"
