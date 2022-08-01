@@ -10,6 +10,7 @@ We proudly present Uni-Fold as a thoroughly open-source platform for developing 
 
 - Easy distributed training based on [Uni-Core](https://github.com/dptech-corp/Uni-Core/), as well as other conveniences including half-precision training (`float16/bfloat16`), per-sample gradient clipping, and fused CUDA kernels.
 
+- Convenient web server at [Hermite™](https://hermite.dp.tech/).
 
 The name Uni-Fold is inherited from Uni-Fold-JAX. First released on Dec 8 2021, [Uni-Fold-JAX](https://github.com/dptech-corp/Uni-Fold-jax) was the first open-source project (with training scripts) that successfully reproduced the from-scratch training of AlphaFold. Until recently, Uni-Fold-JAX is still the only project that supports training of the original AlphaFold implementation in JAX framework. Due to efficiency and collaboration considerations, we moved from Jax to PyTorch on Jan 2022, based on which we further developed the multimer models.
 
@@ -50,7 +51,7 @@ bash run_unifold.sh \
     /path/to/model_parameters.pt      # model parameters
 ```
 
-For monomer prediction, each fasta file shall contain only one sequence; for multimer prediction, the input fasta file shall contain all sequences of the target complex including **duplicated homologous sequences**.
+For monomer prediction, each fasta file shall contain only one sequence; for multimer prediction, the input fasta file shall contain all sequences of the target complex including **duplicated homologous sequences**. That is, chains with identical sequences shall be duplicated to their number in the complex.
 
 ### Prediction results
 
