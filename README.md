@@ -35,11 +35,6 @@ Make sure there is at least 3TB storage space for downloading (~500GB) and uncom
 
 Parameters are coming soon :)
 
-<!-- Inferenece and finetuning with Uni-Fold requires pretrained model parameters. Use the following command to download the parameters: -->
-
-### Converting the AlphaFold and OpenFold parameters to Uni-Fold
-
-[converting scripts]
 
 ## Running Uni-Fold
 
