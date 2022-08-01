@@ -13,12 +13,13 @@ Uni-Fold is a thoroughly open-source platform for developing protein folding mod
 The name Uni-Fold is inherited from Uni-Fold-JAX. First released on Dec 8 2021, [Uni-Fold-JAX](https://github.com/dptech-corp/Uni-Fold-jax) was the first open-source project (with training scripts) that successfully reproduced the from-scratch training of AlphaFold. Until now, Uni-Fold-JAX is still the only project that supports training of the original AlphaFold implementation in JAX framework. Due to efficiency and collaboration considerations, we moved from Jax to PyTorch on Jan 2022, based on which we further developed the multimer models.
 
 
-## Installation
+## Installation and Preparations
+
+### Installing Uni-Fold
 
 [Instructions on installation]
 
-
-## Preparing the datasets
+### Preparing the datasets
 
 Training and inference with Uni-Fold require homology searches on sequence and structure databases. Use the following command to download these databases:
 
@@ -29,13 +30,13 @@ Training and inference with Uni-Fold require homology searches on sequence and s
 Make sure there is at least 3TB storage space for downloading (~500GB) and uncompressing the databases.
 
 
-## Downloading the pre-trained model parameters
+### Downloading the pre-trained model parameters
 
 Parameters are coming soon :)
 
 <!-- Inferenece and finetuning with Uni-Fold requires pretrained model parameters. Use the following command to download the parameters: -->
 
-## Converting the AlphaFold and OpenFold parameters to Uni-Fold
+### Converting the AlphaFold and OpenFold parameters to Uni-Fold
 
 [converting scripts]
 
@@ -53,11 +54,11 @@ bash run_unifold.sh \
     /path/to/model_parameters.pt      # model parameters
 ```
 
-For monomer prediction, each fasta file shall contain only one sequence; for multimer prediction, the input fasta file shall contain all sequences of the target complex, **with duplicated homologous sequences**.
+For monomer prediction, each fasta file shall contain only one sequence; for multimer prediction, the input fasta file shall contain all sequences of the target complex including **duplicated homologous sequences**.
 
-## Uni-Fold outputs
+### Prediction results
 
-The outputs of Uni-Fold inferences contain the predicted structures in `*.pdb` files. Besides, other outputs are dumped in `*.pkl.gz` files. We summarize the confidence metrics, namely `plddt` and `iptm+ptm` in `*.json` files.
+The output directory of running Uni-Fold contain the predicted structures in `*.pdb` files. Besides, other outputs are dumped in `*.pkl.gz` files. We summarize the confidence metrics, namely `plddt` and `iptm+ptm` in `*.json` files.
 
 ## Training Uni-Fold
 
