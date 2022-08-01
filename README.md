@@ -63,7 +63,11 @@ For monomer prediction, each fasta file shall contain only one sequence; for mul
 
 ### Monomer Model
 
-[Train monomer code]
+Run the following command to train the multimer model:
+
+```bash
+
+```
 
 ### Multimer Model
 
