@@ -1,24 +1,27 @@
-# Uni-Fold: an open-source platform for developing protein folding models beyond AlphaFold.
+# Uni-Fold: an open-source platform for developing protein models beyond AlphaFold.
 
-Uni-Fold is a thoroughly open-source platform for developing protein folding models beyond [AlphaFold](https://github.com/deepmind/alphafold/), with following advantages:
+We proudly present Uni-Fold as a thoroughly open-source platform for developing protein models beyond [AlphaFold](https://github.com/deepmind/alphafold/). Uni-Fold introduces the following features:
 
-- Reimplemented AlphaFold and AlphaFold-Multimer models in PyTorch framework. The first project for AlphaFold-Multimer training.
+- Reimplemented AlphaFold and AlphaFold-Multimer models in PyTorch framework. This is currently the first (if any else) open-source repository that supports training AlphaFold-Multimer
 
-- Model correctness proved by successful from-scratch training with equivalent accuracy.
+- Model correctness proved by successful from-scratch training with equivalent accuracy, both monomer and multimer included.
 
-- Highest efficiency among existing AlphaFold implementations.
+- Highest efficiency among existing AlphaFold implementations (to our knowledge).
 
-- Rich features from [Uni-Core](https://github.com/dptech-corp/Uni-Core/), such as efficient fp16/bf16 training, per sample gradient clipping, and fused kernels. 
+- Easy distributed training based on [Uni-Core](https://github.com/dptech-corp/Uni-Core/), as well as other conveniences including half-precision training (`float16/bfloat16`), per-sample gradient clipping, and fused CUDA kernels.
 
-The name Uni-Fold is inherited from Uni-Fold-JAX. First released on Dec 8 2021, [Uni-Fold-JAX](https://github.com/dptech-corp/Uni-Fold-jax) was the first open-source project (with training scripts) that successfully reproduced the from-scratch training of AlphaFold. Until now, Uni-Fold-JAX is still the only project that supports training of the original AlphaFold implementation in JAX framework. Due to efficiency and collaboration considerations, we moved from Jax to PyTorch on Jan 2022, based on which we further developed the multimer models.
+- Convenient web server at [Hermite™](https://hermite.dp.tech/).
+
+The name Uni-Fold is inherited from Uni-Fold-JAX. First released on Dec 8 2021, [Uni-Fold-JAX](https://github.com/dptech-corp/Uni-Fold-jax) was the first open-source project (with training scripts) that successfully reproduced the from-scratch training of AlphaFold. Until recently, Uni-Fold-JAX is still the only project that supports training of the original AlphaFold implementation in JAX framework. Due to efficiency and collaboration considerations, we moved from Jax to PyTorch on Jan 2022, based on which we further developed the multimer models.
 
 
-## Installation
+## Installation and Preparations
+
+### Installing Uni-Fold
 
 [Instructions on installation]
 
-
-## Preparing the datasets
+### Preparing the datasets
 
 Training and inference with Uni-Fold require homology searches on sequence and structure databases. Use the following command to download these databases:
 
@@ -29,15 +32,10 @@ Training and inference with Uni-Fold require homology searches on sequence and s
 Make sure there is at least 3TB storage space for downloading (~500GB) and uncompressing the databases.
 
 
-## Downloading the pre-trained model parameters
+### Downloading the pre-trained model parameters
 
 Parameters are coming soon :)
 
-<!-- Inferenece and finetuning with Uni-Fold requires pretrained model parameters. Use the following command to download the parameters: -->
-
-## Converting the AlphaFold and OpenFold parameters to Uni-Fold
-
-[converting scripts]
 
 ## Running Uni-Fold
 
@@ -53,21 +51,68 @@ bash run_unifold.sh \
     /path/to/model_parameters.pt      # model parameters
 ```
 
-For monomer prediction, each fasta file shall contain only one sequence; for multimer prediction, the input fasta file shall contain all sequences of the target complex, **with duplicated homologous sequences**.
+For monomer prediction, each fasta file shall contain only one sequence; for multimer prediction, the input fasta file shall contain all sequences of the target complex including **duplicated homologous sequences**. That is, chains with identical sequences shall be duplicated to their number in the complex.
 
-## Uni-Fold outputs
+### Prediction results
 
-[Explanations on Uni-Fold Outputs]
+The output directory of running Uni-Fold contain the predicted structures in `*.pdb` files. Besides, other outputs are dumped in `*.pkl.gz` files. We summarize the confidence metrics, namely `plddt` and `iptm+ptm` in `*.json` files.
 
 ## Training Uni-Fold
 
-### Monomer Model
+Training Uni-Fold relies on pre-calculated features of proteins. We provide a demo dataset in the [example data](example_data) folder. A larger dataset will be released soon.
 
-[Train monomer code]
+### Demo case
 
-### Multimer Model
+To start with, we provide a demo script to train the monomer/multimer system of Uni-Fold:
 
-[Train multimer code]
+```bash
+bash train_monomer_demo.sh .
+```
+
+and
+
+```bash
+bash train_multimer_demo.sh .
+```
+
+This command starts a training process on the [demo data](example_data) included in this repository. Note that this demo script only tests the correctness of package installation and does not reflect any true performances. 
+
+
+### From-scratch Training
+
+Run the following command to train Uni-Fold Monomer/Multimer from-scratch:
+
+```bash
+bash train_monomer.sh \                 # train_multimer.sh for multimer
+    /path/to/training/data/directory/ \ # dataset directory
+    /path/to/output/directory/ \        # output directory where parameters are stored
+    model_2_af2                         # model name
+```
+
+Notice that: 
+
+1. The dataset directory should be configurated in a similar way as [example data](example_data).
+2. The output directory should have enough space to store model parameters (~3GB per checkpoint, so empirically >100GB satisfies).
+3. We provide several default model names in [config.py](unifold/config.py), namely `model_1`, `model_2`, `model_2_af2` etc. for monomer models and `multimer`, `multimer_af2` etc. for multimer models. Check `model_config()` function for the differences between model names. You may also personalize your own model by modifying the function (i.e. forking the if-elses).
+
+
+### Finetuning
+
+Run the following command to finetune Uni-Fold Monomer/Multimer pretrained models:
+
+```bash
+bash finetune_monomer.sh \              # finetune_multimer.sh for multimer
+    /path/to/training/data/directory/ \ # dataset directory
+    /path/to/output/directory/ \        # output directory where parameters are stored
+    /path/to/pretrained/parameters.pt \ # pretrained parameters
+    model_2_af2                         # model name
+```
+
+Besides the notices in the previous section, additionaly notice that: 
+
+1. The model architecture should be correctly specified by the model name.
+2. Checkpoints must be in Uni-Fold format (`*.pt`).
+
 
 ## Citing this work
 
@@ -81,7 +126,7 @@ Citation is coming soon :)
 
 ## Acknowledgements
 
-Our training framework is based on [Uni-Core](https://github.com/dptech-corp/Uni-Core/), and fused operators are from [fused_ops](https://github.com/guolinke/fused_ops/). Some of the PyTorch implementations refer to an early version of [OpenFold](https://github.com/aqlaboratory/openfold), while mostly follow the original codes of [AlphaFold](https://github.com/deepmind/alphafold/). For the data processing part, we follow [AlphaFold](https://github.com/deepmind/alphafold/), and use [Biopython](https://biopython.org/), [HH-suite3](https://github.com/soedinglab/hh-suite/), [HMMER](http://eddylab.org/software/hmmer/), [Kalign](https://msa.sbc.su.se/cgi-bin/msa.cgi), [pandas](https://pandas.pydata.org/), [NumPy](https://numpy.org/), and [SciPy](https://scipy.org/).
+Our training framework is based on [Uni-Core](https://github.com/dptech-corp/Uni-Core/). Implementation of fused operators referred to  [fused_ops](https://github.com/guolinke/fused_ops/). We partly referred to an early version of [OpenFold](https://github.com/aqlaboratory/openfold) for some of the PyTorch implementation, while mostly followed the original code of [AlphaFold](https://github.com/deepmind/alphafold/). For the data processing part, we followed [AlphaFold](https://github.com/deepmind/alphafold/), and referred to utilities in [Biopython](https://biopython.org/), [HH-suite3](https://github.com/soedinglab/hh-suite/), [HMMER](http://eddylab.org/software/hmmer/), [Kalign](https://msa.sbc.su.se/cgi-bin/msa.cgi), [pandas](https://pandas.pydata.org/), [NumPy](https://numpy.org/), and [SciPy](https://scipy.org/).
 
 ## License and Disclaimer
 
