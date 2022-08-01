@@ -1,14 +1,15 @@
 # Uni-Fold: an open-source platform for developing protein models beyond AlphaFold.
 
-Uni-Fold is a thoroughly open-source platform for developing protein folding models beyond [AlphaFold](https://github.com/deepmind/alphafold/), with following advantages:
+Uni-Fold is a thoroughly open-source platform for developing protein models beyond [AlphaFold](https://github.com/deepmind/alphafold/). Uni-Fold introduces the following features:
 
-- Reimplemented AlphaFold and AlphaFold-Multimer models in PyTorch framework. The first project for AlphaFold-Multimer training.
+- Reimplemented AlphaFold and AlphaFold-Multimer models in PyTorch framework. To our knowledge, this is the only open-source project for training AlphaFold-Multimer.
 
-- Model correctness proved by successful from-scratch training with equivalent accuracy.
+- Model correctness proved by successful from-scratch training with equivalent accuracy, both monomer and multimer included.
 
-- Highest efficiency among existing AlphaFold implementations.
+- Highest efficiency among existing AlphaFold implementations (to our knowledge).
 
-- Rich features from [Uni-Core](https://github.com/dptech-corp/Uni-Core/), such as efficient fp16/bf16 training, per sample gradient clipping, and fused kernels. 
+- Easy distributed training based on [Uni-Core](https://github.com/dptech-corp/Uni-Core/), as well as other conveniences including half-precision training (`float16/bfloat16`), per-sample gradient clipping, and fused CUDA kernels.
+
 
 The name Uni-Fold is inherited from Uni-Fold-JAX. First released on Dec 8 2021, [Uni-Fold-JAX](https://github.com/dptech-corp/Uni-Fold-jax) was the first open-source project (with training scripts) that successfully reproduced the from-scratch training of AlphaFold. Until now, Uni-Fold-JAX is still the only project that supports training of the original AlphaFold implementation in JAX framework. Due to efficiency and collaboration considerations, we moved from Jax to PyTorch on Jan 2022, based on which we further developed the multimer models.
 
