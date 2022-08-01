@@ -19,7 +19,19 @@ The name Uni-Fold is inherited from our previous repository, [Uni-Fold-JAX](http
 
 ### Installing Uni-Fold
 
-[Instructions on installation]
+As Uni-Core needs to compile CUDA kernels in installation, we also provide a docker image to save your efforts. To use the GPU within docker you need to install nvidia-docker2 first. Use the following command to pull the docker image:
+
+```bash
+docker pull dptechnology/unifold:pytorch1.11.0-cuda11.3-latest
+```
+
+Then, you can create and attach into docker container, and clone & install unifold.
+
+```bash
+git clone https://github.com/dptech-corp/Uni-Fold
+cd Uni-Fold
+pip install -e .
+```
 
 ### Preparing the datasets
 
