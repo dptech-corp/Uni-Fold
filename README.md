@@ -8,11 +8,7 @@ We proudly present Uni-Fold as a thoroughly open-source platform for developing 
 
 - Highest efficiency among existing AlphaFold implementations (to our knowledge).
 
-<<<<<<< HEAD
-- Rich features from [Uni-Core](https://github.com/dptech-corp/Uni-Core/), such as efficient fp16/bf16 training, per sample gradient clipping, and fused kernels.
-=======
 - Easy distributed training based on [Uni-Core](https://github.com/dptech-corp/Uni-Core/), as well as other conveniences including half-precision training (`float16/bfloat16`), per-sample gradient clipping, and fused CUDA kernels.
->>>>>>> origin/main
 
 - Convenient web server at [Hermite™](https://hermite.dp.tech/).
 
