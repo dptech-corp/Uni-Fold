@@ -77,7 +77,7 @@ def main():
                                                      eps=1e-10)
 
             def forward(self, node, pair, node_mask, pair_mask):
-                node, pair = self.EvoformerBlock(node, pair, node_mask, pair_mask, use_lma=True)
+                node, pair = self.EvoformerBlock(node, pair, node_mask, pair_mask)
                 return node, pair
 
     attn_layers = []
