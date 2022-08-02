@@ -32,7 +32,6 @@ def main():
                         action='store_true',
                         help='Benchmark with Evoformer Implementation from OpenFold.')
     parser.add_argument('--fwd', action='store_true', help='Only execute Fwd Pass.')
-    parser.add_argument('--prof', action='store_true', help='run with profiler.')
 
     args = parser.parse_args()
 
@@ -78,7 +77,7 @@ def main():
                                                      eps=1e-10)
 
             def forward(self, node, pair, node_mask, pair_mask):
-                node, pair = self.EvoformerBlock(node, pair, node_mask, pair_mask)
+                node, pair = self.EvoformerBlock(node, pair, node_mask, pair_mask, use_lma=True)
                 return node, pair
 
     attn_layers = []
@@ -116,32 +115,25 @@ def main():
     pair_mask = torch.ones((args.batch_size, args.res_length, args.res_length),
                            dtype=precision,
                            device=torch.device("cuda")).requires_grad_(False)
-    grads_node = torch.randn_like(inputs_pair)
 
-    if args.prof:
-        prof = torch.profiler.profile(
-            schedule=torch.profiler.schedule(wait=1,
-                                             warmup=args.warmup_trials,
-                                             active=args.trials,
-                                             repeat=1),
-            on_trace_ready=torch.profiler.tensorboard_trace_handler('./log/fastfold'),
-            profile_memory=False,
-            record_shapes=False,
-            with_stack=False)
-        prof.start()
 
+    total_used_mem_gb = 0
     for trial in range(0, args.trials + args.warmup_trials):
         layer_inputs = inputs_node, inputs_pair
         evt_idx = trial - args.warmup_trials
 
         torch.distributed.barrier()
         torch.cuda.synchronize()
-
+        torch.cuda.reset_peak_memory_stats()
         if evt_idx >= 0:
             start_evt_fwd[evt_idx].record()
-
-        for lyr_idx in range(0, args.layers):
-            layer_inputs = attn_layers[lyr_idx].forward(*layer_inputs, node_mask, pair_mask)
+        with torch.set_grad_enabled(not args.fwd):
+            for lyr_idx in range(0, args.layers):
+                layer_inputs = attn_layers[lyr_idx].forward(
+                    *layer_inputs,
+                    node_mask,
+                    pair_mask,
+                )
 
         torch.cuda.synchronize()
 
@@ -149,20 +141,16 @@ def main():
             start_evt_bwd[evt_idx].record()
 
         if not args.fwd:
-            layer_inputs[1].backward(grads_node)
-        
-        torch.cuda.synchronize()
+            s = layer_inputs[0].mean() + layer_inputs[1].mean()
+            s.backward()
 
+        torch.cuda.synchronize()
+        cur_cost_mem = torch.cuda.max_memory_allocated() / 1024 / 1024 / 1024
+        total_used_mem_gb += cur_cost_mem
         if evt_idx >= 0:
             stop_evt_bwd[evt_idx].record()
 
-        if args.prof:
-            prof.step()
 
-    if args.prof:
-        prof.stop()
-
-    torch.distributed.barrier()
     torch.cuda.synchronize()
     elapsed_time_fwd = 0.0
     elapsed_time_bwd = 0.0
@@ -170,11 +158,18 @@ def main():
         elapsed_time_fwd += start_evt_fwd[evt_idx].elapsed_time(start_evt_bwd[evt_idx])
         elapsed_time_bwd += start_evt_bwd[evt_idx].elapsed_time(stop_evt_bwd[evt_idx])
 
-    print("[ MSA Attn ] Input: {:4d}, {:4d}, {:4d}, ({:4d} {:4d}) Fwd Time / Layer: {:.3f} ms Bwd Time / Layer: {:.3f} ms".format(
-        args.batch_size, args.msa_length, args.res_length,     \
-        args.cm, args.cz,                                      \
-        elapsed_time_fwd / ( args.trials * args.layers ),      \
-        elapsed_time_bwd / ( args.trials * args.layers )))
+    print(
+        "Input: {:4d}, {:4d}, {:4d}, ({:4d} {:4d}), Fwd Time / Layer: {:.3f} ms, Bwd Time / Layer: {:.3f} ms, Memory cost {:.3f} GB".format(
+            args.batch_size,
+            args.msa_length,
+            args.res_length,
+            args.cm,
+            args.cz,
+            elapsed_time_fwd  / (args.trials * args.layers),
+            elapsed_time_bwd  / (args.trials * args.layers),
+            total_used_mem_gb / (args.trials),
+        )
+    )
 
 
 if __name__ == '__main__':

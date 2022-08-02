@@ -99,7 +99,6 @@ def main():
     parser.add_argument(
         "--fp16", action="store_true", help="Use fp16 for benchmark (for V100)"
     )
-    parser.add_argument("--prof", action="store_true", help="run with profiler.")
 
     args = parser.parse_args()
 
@@ -158,39 +157,27 @@ def main():
         device=torch.device("cuda"),
     ).requires_grad_(False)
     tri_start_mask, tri_end_mask = gen_tri_attn_mask(pair_mask, 3e4)
-    grads_node = torch.randn_like(inputs_pair)
 
-    if args.prof:
-        prof = torch.profiler.profile(
-            schedule=torch.profiler.schedule(
-                wait=1, warmup=args.warmup_trials, active=args.trials, repeat=1
-            ),
-            on_trace_ready=torch.profiler.tensorboard_trace_handler("./log/benchmark"),
-            profile_memory=False,
-            record_shapes=False,
-            with_stack=False,
-        )
-        prof.start()
-
+    total_used_mem_gb = 0
     for trial in range(0, args.trials + args.warmup_trials):
         layer_inputs = inputs_node, inputs_pair
         evt_idx = trial - args.warmup_trials
 
         torch.cuda.synchronize()
-
+        torch.cuda.reset_peak_memory_stats()
         if evt_idx >= 0:
             start_evt_fwd[evt_idx].record()
-
-        for lyr_idx in range(0, args.layers):
-            layer_inputs = attn_layers[lyr_idx].forward(
-                *layer_inputs,
-                node_mask,
-                pair_mask,
-                msa_raw_mask,
-                msa_col_mask,
-                tri_start_mask,
-                tri_end_mask
-            )
+        with torch.set_grad_enabled(not args.fwd):
+            for lyr_idx in range(0, args.layers):
+                layer_inputs = attn_layers[lyr_idx].forward(
+                    *layer_inputs,
+                    node_mask,
+                    pair_mask,
+                    msa_raw_mask,
+                    msa_col_mask,
+                    tri_start_mask,
+                    tri_end_mask
+                )
 
         torch.cuda.synchronize()
 
@@ -202,14 +189,11 @@ def main():
             s.backward()
 
         torch.cuda.synchronize()
+        cur_cost_mem = torch.cuda.max_memory_allocated() / 1024 / 1024 / 1024
+        total_used_mem_gb += cur_cost_mem
         if evt_idx >= 0:
             stop_evt_bwd[evt_idx].record()
 
-        if args.prof:
-            prof.step()
-
-    if args.prof:
-        prof.stop()
 
     torch.cuda.synchronize()
     elapsed_time_fwd = 0.0
@@ -219,14 +203,15 @@ def main():
         elapsed_time_bwd += start_evt_bwd[evt_idx].elapsed_time(stop_evt_bwd[evt_idx])
 
     print(
-        "[ MSA Attn ] Input: {:4d}, {:4d}, {:4d}, ({:4d} {:4d}) Fwd Time / Layer: {:.3f} ms Bwd Time / Layer: {:.3f} ms".format(
+        " Input: {:4d}, {:4d}, {:4d}, ({:4d} {:4d}), Fwd Time / Layer: {:.3f} ms, Bwd Time / Layer: {:.3f} ms, Memory cost {:.3f} GB".format(
             args.batch_size,
             args.msa_length,
             args.res_length,
             args.cm,
             args.cz,
-            elapsed_time_fwd / (args.trials * args.layers),
-            elapsed_time_bwd / (args.trials * args.layers),
+            elapsed_time_fwd  / (args.trials * args.layers),
+            elapsed_time_bwd  / (args.trials * args.layers),
+            total_used_mem_gb / (args.trials),
         )
     )
 
