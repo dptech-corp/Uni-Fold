@@ -8,7 +8,7 @@ Uni-Fold is a thoroughly open-source platform for developing protein folding mod
 
 - Highest efficiency among existing AlphaFold implementations.
 
-- Rich features from [Uni-Core](https://github.com/dptech-corp/Uni-Core/), such as efficient fp16/bf16 training, per sample gradient clipping, and fused kernels. 
+- Rich features from [Uni-Core](https://github.com/dptech-corp/Uni-Core/), such as efficient fp16/bf16 training, per sample gradient clipping, and fused kernels.
 
 The name Uni-Fold is inherited from Uni-Fold-JAX. First released on Dec 8 2021, [Uni-Fold-JAX](https://github.com/dptech-corp/Uni-Fold-jax) was the first open-source project (with training scripts) that successfully reproduced the from-scratch training of AlphaFold. Until now, Uni-Fold-JAX is still the only project that supports training of the original AlphaFold implementation in JAX framework. Due to efficiency and collaboration considerations, we moved from Jax to PyTorch on Jan 2022, based on which we further developed the multimer models.
 
@@ -36,9 +36,19 @@ Parameters are coming soon :)
 <!-- Inferenece and finetuning with Uni-Fold requires pretrained model parameters. Use the following command to download the parameters: -->
 
 ## Converting the AlphaFold and OpenFold parameters to Uni-Fold
+One can convert the pretrained AlphaFold and OpenFold parameters to Uni-Fold format via the following commands.
+```bash
+python scripts/convert_alphafold_to_unifold.py \
+    /path/to/alphafold_params.npz \   # AlphaFold params *.npz file
+    /path/to/unifold_format.pt \      # save checkpoint in Uni-Fold format
+    alphafold_model_name \            # specify model name, e.g. model_2_af2, multimer_af2
+```
 
-[converting scripts]
-
+```bash
+python scripts/convert_openfold_to_unifold.py \
+    /path/to/openfold_params.pt \     # OpenFold params *.pt file
+    /path/to/unifold_format.pt \      # save checkpoint in Uni-Fold format
+```
 ## Running Uni-Fold
 
 After properly configurating the environment and databases, run the following command to predict the structure of the target fasta:
@@ -49,7 +59,7 @@ bash run_unifold.sh \
     /path/to/the/output/directory/ \  # output directory
     /path/to/database/directory/ \    # directory of databases
     2020-05-01 \                      # use templates before this date
-    model_2_af2 \                     # specify model name
+    alphafold_model_name \            # specify model name, e.g. model_2_af2, multimer_af2
     /path/to/model_parameters.pt      # model parameters
 ```
 
