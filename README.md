@@ -2,7 +2,7 @@
 
 We proudly present Uni-Fold as a thoroughly open-source platform for developing protein models beyond [AlphaFold](https://github.com/deepmind/alphafold/). Uni-Fold introduces the following features:
 
-- Reimplemented AlphaFold and AlphaFold-Multimer models in PyTorch framework. This is currently the first (if any else) open-source repository that supports training AlphaFold-Multimer.
+- Reimplemented AlphaFold and AlphaFold-Multimer models in PyTorch framework. **This is currently the first (if any else) open-source repository that supports training AlphaFold-Multimer.**
 
 - Model correctness proved by successful from-scratch training with equivalent accuracy, both monomer and multimer included.
 
@@ -46,7 +46,7 @@ Make sure there is at least 3TB storage space for downloading (~500GB) and uncom
 
 ### Downloading the pre-trained model parameters
 
-Parameters are coming soon :)
+Uni-Fold parameters are coming soon :)
 
 <!-- Inferenece and finetuning with Uni-Fold requires pretrained model parameters. Use the following command to download the parameters: -->
 
@@ -74,7 +74,7 @@ bash run_unifold.sh \
     /path/to/the/output/directory/ \  # output directory
     /path/to/database/directory/ \    # directory of databases
     2020-05-01 \                      # use templates before this date
-    alphafold_model_name \            # specify model name, e.g. model_2_af2, multimer_af2
+    model_name \                      # specify model name, must be consistent with model parameters
     /path/to/model_parameters.pt      # model parameters
 ```
 
