@@ -10,7 +10,7 @@ python -m torch.distributed.launch --nproc_per_node=$n_gpu --master_port $MASTER
        --optimizer adam --adam-betas '(0.9, 0.999)' --adam-eps 1e-6 --clip-norm 0.0  --per-sample-clip-norm 0.1 --allreduce-fp32-grad  \
        --lr-scheduler exponential_decay --lr 1e-3 --warmup-updates 1000 --decay-ratio 0.95 --decay-steps 50000 --batch-size 1 \
        --update-freq 1 --seed 42  --tensorboard-logdir $1/tsb/ \
-       --max-update 80000 --max-epoch 1 --log-interval 1 --log-format simple \
-       --save-interval-updates 2500 --validate-interval-updates 500 --keep-interval-updates 1000 --no-epoch-checkpoints  \
+       --max-update 1000 --max-epoch 1 --log-interval 1 --log-format simple \
+       --save-interval-updates 100 --validate-interval-updates 100 --keep-interval-updates 5 --no-epoch-checkpoints  \
        --save-dir $1 --tmp-save-dir $tmp_dir --required-batch-size-multiple 1 --ema-decay 0.999 
 rm -rf $tmp_dir

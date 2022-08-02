@@ -528,12 +528,12 @@ def model_config(name, train=False):
         recursive_set(c, "max_extra_msa", 1024)
         recursive_set(c, "max_msa_clusters", 512)
         c.data.train.crop_size = 384
-        c.loss.violation.weight = 0.5
+        c.loss.violation.weight = 0.02
     elif name == "model_2_af2":
         recursive_set(c, "max_extra_msa", 1024)
         recursive_set(c, "max_msa_clusters", 512)
         c.data.train.crop_size = 384
-        c.loss.violation.weight = 0.5
+        c.loss.violation.weight = 0.02
         c.loss.repr_norm.weight = 0
         c.model.heads.experimentally_resolved.enabled = True
         c.loss.experimentally_resolved.weight = 0.01
@@ -545,7 +545,7 @@ def model_config(name, train=False):
         recursive_set(c, "max_extra_msa", 1024)
         recursive_set(c, "max_msa_clusters", 512)
         c.data.train.crop_size = 384
-        c.loss.violation.weight = 0.5
+        c.loss.violation.weight = 0.02
     elif name == "model_3_af2" or name == "model_4_af2":
         recursive_set(c, "max_extra_msa", 5120)
         recursive_set(c, "max_msa_clusters", 512)
