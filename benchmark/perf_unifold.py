@@ -100,7 +100,6 @@ def main():
         "--fp16", action="store_true", help="Use fp16 for benchmark (for V100)"
     )
     parser.add_argument("--prof", action="store_true", help="run with profiler.")
-    parser.add_argument("--fastfold" action="store_true", help="use fastfold for benchmark")
 
     args = parser.parse_args()
 
@@ -118,10 +117,7 @@ def main():
 
     attn_layers = []
     for idx in range(0, args.layers):
-        if args.fastfold:
-            attn_layers.append(Evoformer(d_node=args.cm, d_pair=args.cz))
-        else:
-            attn_layers.append(WrapEvoformerLayer(d_node=args.cm, d_pair=args.cz))
+        attn_layers.append(WrapEvoformerLayer(d_node=args.cm, d_pair=args.cz))
         attn_layers[idx].cuda()
         attn_layers[idx].to(dtype=precision)
 
