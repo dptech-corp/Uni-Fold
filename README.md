@@ -48,7 +48,22 @@ Make sure there is at least 3TB storage space for downloading (~500GB) and uncom
 
 Parameters are coming soon :)
 
+<!-- Inferenece and finetuning with Uni-Fold requires pretrained model parameters. Use the following command to download the parameters: -->
 
+## Converting the AlphaFold and OpenFold parameters to Uni-Fold
+One can convert the pretrained AlphaFold and OpenFold parameters to Uni-Fold format via the following commands.
+```bash
+python scripts/convert_alphafold_to_unifold.py \
+    /path/to/alphafold_params.npz \   # AlphaFold params *.npz file
+    /path/to/unifold_format.pt \      # save checkpoint in Uni-Fold format
+    alphafold_model_name \            # specify model name, e.g. model_2_af2, multimer_af2
+```
+
+```bash
+python scripts/convert_openfold_to_unifold.py \
+    /path/to/openfold_params.pt \     # OpenFold params *.pt file
+    /path/to/unifold_format.pt \      # save checkpoint in Uni-Fold format
+```
 ## Running Uni-Fold
 
 After properly configurating the environment and databases, run the following command to predict the structure of the target fasta:
@@ -59,7 +74,7 @@ bash run_unifold.sh \
     /path/to/the/output/directory/ \  # output directory
     /path/to/database/directory/ \    # directory of databases
     2020-05-01 \                      # use templates before this date
-    model_2_af2 \                     # specify model name
+    alphafold_model_name \            # specify model name, e.g. model_2_af2, multimer_af2
     /path/to/model_parameters.pt      # model parameters
 ```
 
@@ -67,7 +82,7 @@ For monomer prediction, each fasta file shall contain only one sequence; for mul
 
 ### Prediction results
 
-The output directory of running Uni-Fold contain the predicted structures in `*.pdb` files, where `best.pdb` contains prediction with the highest confidence. Besides, other outputs are dumped in `*.pkl.gz` files. We summarize the confidence metrics, namely `plddt` and `iptm+ptm` in `*.json` files. 
+The output directory of running Uni-Fold contain the predicted structures in `*.pdb` files, where `best.pdb` contains prediction with the highest confidence. Besides, other outputs are dumped in `*.pkl.gz` files. We summarize the confidence metrics, namely `plddt` and `iptm+ptm` in `*.json` files.
 
 ## Training Uni-Fold
 
@@ -87,7 +102,7 @@ and
 bash train_multimer_demo.sh .
 ```
 
-This command starts a training process on the [demo data](example_data) included in this repository. Note that this demo script only tests the correctness of package installation and does not reflect any true performances. 
+This command starts a training process on the [demo data](example_data) included in this repository. Note that this demo script only tests the correctness of package installation and does not reflect any true performances.
 
 
 ### From-scratch Training
@@ -101,7 +116,7 @@ bash train_monomer.sh \                 # train_multimer.sh for multimer
     model_2_af2                         # model name
 ```
 
-Note that: 
+Note that:
 
 1. The dataset directory should be configurated in a similar way as the [example data](example_data).
 2. The output directory should have enough space to store model parameters (~3GB per checkpoint, so empirically 100GB satisfies the default configuration in the shell script).
@@ -120,7 +135,7 @@ bash finetune_monomer.sh \              # finetune_multimer.sh for multimer
     model_2_af2                         # model name
 ```
 
-Besides the notices in the previous section, additionaly note that: 
+Besides the notices in the previous section, additionaly note that:
 
 1. The model architecture should be correctly specified by the model name.
 2. Checkpoints must be in Uni-Fold format (`*.pt`).
@@ -159,4 +174,3 @@ Uni-Fold is an ongoing project. Our target is to develop better protein folding 
 ### Third-party software
 
 Use of the third-party software, libraries or code referred to in the [Acknowledgements](README.md/#acknowledgements) section above may be governed by separate terms and conditions or license provisions. Your use of the third-party software, libraries or code is subject to any such terms and you should check that you can comply with any applicable restrictions or terms and conditions before use.
-

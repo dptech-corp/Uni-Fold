@@ -1,8 +1,6 @@
 import torch
 import sys
 
-
-
 def openfold2unifold(model_states):
     new_model_states = {}
     mul_projs = {}
