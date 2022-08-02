@@ -31,6 +31,9 @@ def main():
     parser.add_argument('--openfold',
                         action='store_true',
                         help='Benchmark with Evoformer Implementation from OpenFold.')
+    parser.add_argument('--openfold-lma',
+                        action='store_true',
+                        help='set use_lma to True in openfold.')
     parser.add_argument('--fwd', action='store_true', help='Only execute Fwd Pass.')
 
     args = parser.parse_args()
@@ -77,7 +80,7 @@ def main():
                                                      eps=1e-10)
 
             def forward(self, node, pair, node_mask, pair_mask):
-                node, pair = self.EvoformerBlock(node, pair, node_mask, pair_mask)
+                node, pair = self.EvoformerBlock(node, pair, node_mask, pair_mask, use_lma=args.openfold_lma)
                 return node, pair
 
     attn_layers = []
