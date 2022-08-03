@@ -46,9 +46,12 @@ Make sure there is at least 3TB storage space for downloading (~500GB) and uncom
 
 ### Downloading the pre-trained model parameters
 
-Uni-Fold parameters are coming soon :)
-
-<!-- Inferenece and finetuning with Uni-Fold requires pretrained model parameters. Use the following command to download the parameters: -->
+Inferenece and finetuning with Uni-Fold requires pretrained model parameters. Use the following command to download the parameters:
+```bash
+wget https://uni-fold.dp.tech/unifold_params_2022-08-01.tar.gz
+tar -zxf unifold_params_2022-08-01.tar.gz
+```
+It contains 1 **monomer** and 1 **multimer** pretrained model parameters, whose model name are `model_2_ft` and `multimer_ft` respectively.
 
 ## Converting the AlphaFold and OpenFold parameters to Uni-Fold
 One can convert the pretrained AlphaFold and OpenFold parameters to Uni-Fold format via the following commands.
