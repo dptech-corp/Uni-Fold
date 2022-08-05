@@ -214,13 +214,30 @@ def compose(x, fs):
     return x
 
 
+def pad_then_stack(
+    values,
+):
+    if len(values[0].shape) >= 1:
+        size = max(v.shape[0] for v in values)
+        new_values = []
+        for v in values:
+            if v.shape[0] < size:
+                res = values[0].new_zeros(size, *v.shape[1:])
+                res[:v.shape[0], ...] = v
+            else:
+                res = v
+            new_values.append(res)
+    else:
+        new_values = values
+    return torch.stack(new_values, dim=0)
+
 def map_fn(fun, x):
     ensembles = [fun(elem) for elem in x]
     features = ensembles[0].keys()
     ensembled_dict = {}
     for feat in features:
-        ensembled_dict[feat] = torch.stack(
-            [dict_i[feat] for dict_i in ensembles], dim=0
+        ensembled_dict[feat] = pad_then_stack(
+            [dict_i[feat] for dict_i in ensembles]
         )
     return ensembled_dict
 
