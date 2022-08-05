@@ -615,6 +615,10 @@ def make_fixed_size(
     num_templates=0,
 ):
     """Guess at the MSA and sequence dimension to make fixed size."""
+    def get_pad_size(cur_size, multiplier=4):
+        return  max(multiplier, 
+                ((cur_size + multiplier - 1) // multiplier) * multiplier
+            )
     if num_res is not None:
         input_num_res = (
             protein["aatype"].shape[0]
@@ -622,10 +626,11 @@ def make_fixed_size(
             else protein["msa_mask"].shape[1]
         )
         if input_num_res != num_res:
-            padding_multimer = 4
-            num_res = (
-                (input_num_res + padding_multimer - 1) // padding_multimer
-            ) * padding_multimer
+            num_res = get_pad_size(input_num_res, 4)
+    if "extra_msa_mask" in protein:
+        input_extra_msa_size = protein["extra_msa_mask"].shape[0]
+        if input_extra_msa_size != extra_msa_size:
+            extra_msa_size = get_pad_size(input_extra_msa_size, 8)
     pad_size_map = {
         N_RES: num_res,
         N_MSA: msa_cluster_size,
