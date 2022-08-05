@@ -513,6 +513,11 @@ def model_config(name, train=False):
 
     if name == "model_1":
         pass
+    elif name == "model_1_ft":
+        recursive_set(c, "max_extra_msa", 5120)
+        recursive_set(c, "max_msa_clusters", 512)
+        c.data.train.crop_size = 384
+        c.loss.violation.weight = 0.02
     elif name == "model_1_af2":
         recursive_set(c, "max_extra_msa", 5120)
         recursive_set(c, "max_msa_clusters", 512)
