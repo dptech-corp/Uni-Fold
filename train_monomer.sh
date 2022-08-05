@@ -39,7 +39,7 @@ model_name=$3
 tmp_dir=`mktemp -d`
 
 python -m torch.distributed.launch --nproc_per_node=$n_gpu --master_port $MASTER_PORT --nnodes=$OMPI_COMM_WORLD_SIZE --node_rank=$OMPI_COMM_WORLD_RANK --master_addr=$MASTER_IP \
-       $(which unicore-train) $1 --user-dir unifold \
+       $(which unicore-train) $1 --user-dir unifold --json-prefix 0408_ \
        --num-workers 4 --ddp-backend=no_c10d \
        --model-name $model_name \
        --task af2 --loss af2 --arch af2  --sd-prob $sd_prob  \
