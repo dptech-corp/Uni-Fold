@@ -47,7 +47,7 @@ python -m torch.distributed.launch --nproc_per_node=$n_gpu --master_port $MASTER
        --lr-scheduler exponential_decay --lr $lr --warmup-updates $warmup_step --decay-ratio $decay_ratio --decay-steps $decay_step --stair-decay --batch-size 1 \
        --update-freq $update_freq --seed $seed  --tensorboard-logdir $2/tsb/ \
        --max-update $total_step --max-epoch 1 --log-interval 10 --log-format simple \
-       --save-interval-updates 250 --validate-interval-updates 250 --keep-interval-updates 10 --no-epoch-checkpoints  \
+       --save-interval-updates 500 --validate-interval-updates 500 --keep-interval-updates 40 --no-epoch-checkpoints  \
        --save-dir $2 --tmp-save-dir $tmp_dir --required-batch-size-multiple 1 --bf16 --ema-decay 0.999 --data-buffer-size 32 --bf16-sr
 
 rm -rf $tmp_dir
