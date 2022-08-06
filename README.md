@@ -122,7 +122,7 @@ bash train_monomer.sh \                 # train_multimer.sh for multimer
 Note that:
 
 1. The dataset directory should be configurated in a similar way as the [example data](example_data).
-2. The output directory should have enough space to store model parameters (~3GB per checkpoint, so empirically 100GB satisfies the default configuration in the shell script).
+2. The output directory should have enough space to store model parameters (~1.5GB per checkpoint, so empirically 60GB satisfies the default configuration in the shell script).
 3. We provide several default model names in [config.py](unifold/config.py), namely `model_1`, `model_2`, `model_2_af2` etc. for monomer models and `multimer`, `multimer_af2` etc. for multimer models. Check `model_config()` function for the differences between model names. You may also personalize your own model by modifying the function (i.e. forking the if-elses).
 
 
