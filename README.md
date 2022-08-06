@@ -12,8 +12,35 @@ We proudly present Uni-Fold as a thoroughly open-source platform for developing 
 
 - Convenient web server at [Hermite™](https://hermite.dp.tech/).
 
+![case](./img/7t6u.png)
+<center>
+<small>
+Figure 1. Uni-Fold successfully predicted the interaction between the nanobody and the GPCR-G protein complex, while AlphaFold-Multimer failed.
+</small>
+</center>
+&nbsp;
+
+We evaluated Uni-Fold on PDB structures release after our training set with less than 40% template identity. The structures for evaluations are included in [`evaluation`](./evaluation). Uni-Fold enjoys similar monomer prediction accuracy and better multimer prediction accuracy compared with AlphaFold(-Multimer). We also benchmarked the efficiency of Uni-Fold. The end-to-end training speed of Uni-Fold is about 2.2 times of the official AlphaFold. More evaluation results and details are included in our [bioRxiv preprint](https://www.biorxiv.org/content/10.1101/2022.08.04.502811).
+
+![case](./img/accuracy.png)
+<center>
+<small>
+Figure 2. Uni-Fold has similar performance on monomers and better performance on multimers compared with AlphaFold(-Multimer).
+</small>
+</center>
+&nbsp;
+
+![case](./img/train_time.png)
+<center>
+<small>
+Figure 3. Uni-Fold is to our knowledge the fastest implemetation of AlphaFold.
+</small>
+</center>
+&nbsp;
+
 The name Uni-Fold is inherited from our previous repository, [Uni-Fold-JAX](https://github.com/dptech-corp/Uni-Fold-jax). First released on Dec 8 2021, Uni-Fold-JAX was the first open-source project (with training scripts) that successfully reproduced the from-scratch training of AlphaFold. Until recently, Uni-Fold-JAX is still the only project that supports training of the original AlphaFold implementation in JAX framework. Due to efficiency and collaboration considerations, we moved from JAX to PyTorch on Jan 2022, based on which we further developed the multimer models.
 
+---
 
 ## Installation and Preparations
 
@@ -142,7 +169,6 @@ Besides the notices in the previous section, additionaly note that:
 
 1. The model architecture should be correctly specified by the model name.
 2. Checkpoints must be in Uni-Fold format (`*.pt`).
-
 
 ## Citing this work
 
