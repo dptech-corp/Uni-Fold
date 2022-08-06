@@ -23,7 +23,7 @@ Figure 1. Uni-Fold successfully predicted the interaction between the nanobody a
 
 We evaluated Uni-Fold on PDB structures release after our training set with less than 40% template identity. The structures for evaluations are included in [`evaluation`](./evaluation). Uni-Fold enjoys similar monomer prediction accuracy and better multimer prediction accuracy compared with AlphaFold(-Multimer). We also benchmarked the efficiency of Uni-Fold. The end-to-end training speed of Uni-Fold is about 2.2 times of the official AlphaFold. More evaluation results and details are included in our [bioRxiv preprint](https://www.biorxiv.org/content/10.1101/2022.08.04.502811).
 
-![case](./img/accuracy.png)
+![case](./img/accuracy.jpg)
 <center>
 <small>
 Figure 2. Uni-Fold has similar performance on monomers and better performance on multimers compared with AlphaFold(-Multimer).
@@ -32,7 +32,7 @@ Figure 2. Uni-Fold has similar performance on monomers and better performance on
 
 &nbsp;
 
-![case](./img/train_time.png)
+![case](./img/train_time.jpg)
 <center>
 <small>
 Figure 3. Uni-Fold is to our knowledge the fastest implemetation of AlphaFold.
