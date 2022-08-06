@@ -146,13 +146,19 @@ Besides the notices in the previous section, additionaly note that:
 
 ## Citing this work
 
-Citation is coming soon :)
-
-<!-- If you use the code or data in this package, please cite:
+If you use the code, the model parameters, the web server at [Hermite™](https://hermite.dp.tech/), or the released data of Uni-Fold as well as [Uni-Fold-JAX](https://github.com/dptech-corp/Uni-Fold-jax), please cite
 
 ```bibtex
-
-``` -->
+@article {uni-fold,
+	author = {Li, Ziyao and Liu, Xuyang and Chen, Weijie and Shen, Fan and Bi, Hangrui and Ke, Guolin and Zhang, Linfeng},
+	title = {Uni-Fold: An Open-Source Platform for Developing Protein Folding Models beyond AlphaFold},
+	year = {2022},
+	doi = {10.1101/2022.08.04.502811},
+	URL = {https://www.biorxiv.org/content/early/2022/08/06/2022.08.04.502811},
+	eprint = {https://www.biorxiv.org/content/early/2022/08/06/2022.08.04.502811.full.pdf},
+	journal = {bioRxiv}
+}
+```
 
 ## Acknowledgements
 
