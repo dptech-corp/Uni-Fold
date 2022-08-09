@@ -545,6 +545,12 @@ def model_config(name, train=False):
         c.globals.alphafold_original_mode = True
     elif name == "model_2_v2":
         c = model_2_v2(c)
+    elif name == "model_1_v2_ft":
+        c = model_2_v2(c)
+        recursive_set(c, "max_extra_msa", 5120)
+        recursive_set(c, "max_msa_clusters", 512)
+        c.data.train.crop_size = 384
+        c.loss.violation.weight = 0.02
     elif name == "model_2_v2_ft":
         c = model_2_v2(c)
         recursive_set(c, "max_extra_msa", 1024)
