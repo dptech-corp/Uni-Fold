@@ -10,7 +10,7 @@ We proudly present Uni-Fold as a thoroughly open-source platform for developing 
 
 - Easy distributed training based on [Uni-Core](https://github.com/dptech-corp/Uni-Core/), as well as other conveniences including half-precision training (`float16/bfloat16`), per-sample gradient clipping, and fused CUDA kernels.
 
-- Convenient web server at [Hermite™](https://hermite.dp.tech/).
+- Convenient web server at [Hermite™](https://hermite.dp.tech/). [More Information](#inference-on-hermite)
 
 ![case](./img/7t6u.png)
 <center>
