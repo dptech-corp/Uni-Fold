@@ -152,8 +152,9 @@ def main(args):
             ptms[cur_save_name] = str(np.mean(out["iptm+ptm"]))
         with open(os.path.join(output_dir, cur_save_name + '.pdb'), "w") as f:
             f.write(protein.to_pdb(cur_protein))
-        with gzip.open(os.path.join(output_dir, cur_save_name + '_outputs.pkl.gz'), 'wb') as f:
-            pickle.dump(out, f)
+        if args.save_raw_output:
+            with gzip.open(os.path.join(output_dir, cur_save_name + '_outputs.pkl.gz'), 'wb') as f:
+                pickle.dump(out, f)
 
     print("plddts", plddts)
     score_name = f"{args.model_name}_{cur_param_path_postfix}_{args.data_random_seed}_{args.times}{name_postfix}"
@@ -220,6 +221,7 @@ if __name__ == "__main__":
     parser.add_argument("--sample_templates", action="store_true")
     parser.add_argument("--use_uniprot", action="store_true")
     parser.add_argument("--bf16", action="store_true")
+    parser.add_argument("--save_raw_output", action="store_true")
 
     args = parser.parse_args()
 
