@@ -10,7 +10,7 @@ We proudly present Uni-Fold as a thoroughly open-source platform for developing 
 
 - Easy distributed training based on [Uni-Core](https://github.com/dptech-corp/Uni-Core/), as well as other conveniences including half-precision training (`float16/bfloat16`), per-sample gradient clipping, and fused CUDA kernels.
 
-- Convenient web server at [Hermite™](https://hermite.dp.tech/).
+- Convenient web server at [Hermite™](https://hermite.dp.tech/). [More Information](#inference-on-hermite)
 
 ![case](./img/7t6u.png)
 <center>
@@ -49,7 +49,9 @@ The name Uni-Fold is inherited from our previous repository, [Uni-Fold-JAX](http
 
 ### Installing Uni-Fold
 
-As Uni-Core needs to compile CUDA kernels in installation, we also provide a docker image to save your efforts. To use the GPU within docker you need to [install `nvidia-docker-2`](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker) first. Use the following command to pull the docker image:
+Uni-Fold is implemented on a distributed PyTorch framework, [Uni-Core](https://github.com/dptech-corp/Uni-Core). As Uni-Core needs to compile CUDA kernels in installation which requires specific CUDA and PyTorch versions, we provide a Docker image to save potential trouble. 
+
+To use GPUs within docker you need to [install nvidia-docker-2](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker) first. Use the following command to pull the docker image:
 
 ```bash
 docker pull dptechnology/unifold:pytorch1.11.0-cuda11.3-latest
@@ -172,6 +174,10 @@ Besides the notices in the previous section, additionaly note that:
 
 1. The model architecture should be correctly specified by the model name.
 2. Checkpoints must be in Uni-Fold format (`*.pt`).
+
+## Inference on Hermite
+
+We provide covenient structure prediction service on [Hermite™](https://hermite.dp.tech/), a new-generation drug design platform powered by AI, physics, and computing. Users only need to upload sequences of protein monomers and multimers to obtain the predicted structures from Uni-Fold, acompanied by various analyzing tools. [Click here](https://docs.google.com/document/d/1iFdezkKJVuhyqN3WvzsC7-422T-zf18IhP7M9CBj5gs) for more information of how to use Hermite™.
 
 ## Citing this work
 
