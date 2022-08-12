@@ -141,10 +141,13 @@ class GlobalAttention(nn.Module):
         return self.linear_o(o)
 
 
-def gen_msa_attn_mask(mask, inf):
+def gen_msa_attn_mask(mask, inf, gen_col_mask=True):
     row_mask = gen_attn_mask(mask, -inf)[..., :, None, None, :]
-    col_mask = gen_attn_mask(mask.transpose(-1, -2), -inf)[..., :, None, None, :]
-    return row_mask, col_mask
+    if gen_col_mask:
+        col_mask = gen_attn_mask(mask.transpose(-1, -2), -inf)[..., :, None, None, :]
+        return row_mask, col_mask
+    else:
+        return row_mask
 
 
 class MSAAttention(nn.Module):
