@@ -259,9 +259,10 @@ class AlphaFold(nn.Module):
 
         if self.config.extra_msa.enabled:
             a = self.extra_msa_embedder(build_extra_msa_feat(feats))
-            extra_msa_row_mask, extra_msa_col_mask = gen_msa_attn_mask(
+            extra_msa_row_mask = gen_msa_attn_mask(
                 feats["extra_msa_mask"],
                 inf=self.inf,
+                gen_col_mask=False,
             )
             z = self.extra_msa_stack(
                 a,
@@ -270,7 +271,7 @@ class AlphaFold(nn.Module):
                 chunk_size=self.globals.chunk_size,
                 pair_mask=pair_mask,
                 msa_row_attn_mask=extra_msa_row_mask,
-                msa_col_attn_mask=extra_msa_col_mask,
+                msa_col_attn_mask=None,
                 tri_start_attn_mask=tri_start_attn_mask,
                 tri_end_attn_mask=tri_end_attn_mask,
             )
