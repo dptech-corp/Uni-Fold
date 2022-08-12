@@ -229,10 +229,11 @@ class MSAAttention(nn.Module):
         if chunk_size is not None:
             m = self._chunk(m, attn_mask, bias, chunk_size)
         else:
-            if m.shape[-3] <= 2560:
+            attn_chunk_size = 2560
+            if m.shape[-3] <= attn_chunk_size:
                 m = self.mha(q=m, k=m, v=m, mask=attn_mask, bias=bias)
             else:
-                return self._chunk_attn(m, attn_mask, bias)
+                return self._chunk_attn(m, attn_mask, bias, chunk_size=attn_chunk_size)
 
         return m
 
