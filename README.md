@@ -12,6 +12,8 @@ We proudly present Uni-Fold as a thoroughly open-source platform for developing 
 
 - Convenient web server at [Hermite™](https://hermite.dp.tech/). [More Information](#inference-on-hermite)
 
+- Simplified version of Uni-Fold at Google Colab: [Uni-Fold Colab](https://colab.research.google.com/github/dptech-corp/Uni-Fold/blob/main/notebooks/unifold.ipynb).
+
 ![case](./img/7t6u.png)
 <center>
 <small>
@@ -49,7 +51,7 @@ The name Uni-Fold is inherited from our previous repository, [Uni-Fold-JAX](http
 
 ### Installing Uni-Fold
 
-Uni-Fold is implemented on a distributed PyTorch framework, [Uni-Core](https://github.com/dptech-corp/Uni-Core). As Uni-Core needs to compile CUDA kernels in installation which requires specific CUDA and PyTorch versions, we provide a Docker image to save potential trouble. 
+Uni-Fold is implemented on a distributed PyTorch framework, [Uni-Core](https://github.com/dptech-corp/Uni-Core). As Uni-Core needs to compile CUDA kernels in installation which requires specific CUDA and PyTorch versions, we provide a Docker image to save potential trouble.
 
 To use GPUs within docker you need to [install nvidia-docker-2](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker) first. Use the following command to pull the docker image:
 
