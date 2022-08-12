@@ -186,6 +186,28 @@ class MSAAttention(nn.Module):
             num_batch_dims=len(m.shape[:-2]),
         )
 
+
+    @torch.jit.ignore
+    def _chunk_attn(
+        self,
+        m: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+        bias: Optional[torch.Tensor] = None,
+        num_chunk: Optional[int] = 2,
+    ) -> torch.Tensor:
+        chunk_size = (m.shape[-3] + num_chunk - 1) // num_chunk
+        outputs = []
+        for i in range(num_chunk):
+            chunk_start = i * chunk_size
+            chunk_end  = min(m.shape[-3], chunk_start + chunk_size)
+            cur_m = m[..., chunk_start: chunk_end , :, :]
+            cur_mask = mask[..., chunk_start: chunk_end, :, :, :] if mask is not None else None
+            outputs.append(
+                self.mha(q=cur_m, k=cur_m, v=cur_m, mask=cur_mask, bias=bias)
+            )
+        return torch.concat(outputs, dim=-3)
+
+
     def forward(
         self,
         m: torch.Tensor,
@@ -207,7 +229,10 @@ class MSAAttention(nn.Module):
         if chunk_size is not None:
             m = self._chunk(m, attn_mask, bias, chunk_size)
         else:
-            m = self.mha(q=m, k=m, v=m, mask=attn_mask, bias=bias)
+            if m.shape[-3] <= 2560:
+                m = self.mha(q=m, k=m, v=m, mask=attn_mask, bias=bias)
+            else:
+                return self._chunk_attn(m, attn_mask, bias)
 
         return m
 
