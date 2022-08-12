@@ -193,9 +193,9 @@ class MSAAttention(nn.Module):
         m: torch.Tensor,
         mask: Optional[torch.Tensor] = None,
         bias: Optional[torch.Tensor] = None,
-        num_chunk: Optional[int] = 2,
+        chunk_size: Optional[int] = 2560,
     ) -> torch.Tensor:
-        chunk_size = (m.shape[-3] + num_chunk - 1) // num_chunk
+        num_chunk = (m.shape[-3] + chunk_size - 1) // chunk_size
         outputs = []
         for i in range(num_chunk):
             chunk_start = i * chunk_size
