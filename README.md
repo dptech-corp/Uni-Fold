@@ -10,22 +10,56 @@ We proudly present Uni-Fold as a thoroughly open-source platform for developing 
 
 - Easy distributed training based on [Uni-Core](https://github.com/dptech-corp/Uni-Core/), as well as other conveniences including half-precision training (`float16/bfloat16`), per-sample gradient clipping, and fused CUDA kernels.
 
-- Convenient web server at [Hermite™](https://hermite.dp.tech/).
+- Convenient web server at [Hermite™](https://hermite.dp.tech/). [More Information](#inference-on-hermite)
+
+- Simplified version of Uni-Fold at Google Colab: [Uni-Fold Colab](https://colab.research.google.com/github/dptech-corp/Uni-Fold/blob/main/notebooks/unifold.ipynb).
+
+![case](./img/7t6u.png)
+<center>
+<small>
+Figure 1. Uni-Fold successfully predicted the interaction between the nanobody and the GPCR-G protein complex, while AlphaFold-Multimer failed.
+</small>
+</center>
+
+&nbsp;
+
+We evaluated Uni-Fold on PDB structures release after our training set with less than 40% template identity. The structures for evaluations are included in [`evaluation`](./evaluation). Uni-Fold enjoys similar monomer prediction accuracy and better multimer prediction accuracy compared with AlphaFold(-Multimer). We also benchmarked the efficiency of Uni-Fold. The end-to-end training speed of Uni-Fold is about 2.2 times of the official AlphaFold. More evaluation results and details are included in our [bioRxiv preprint](https://www.biorxiv.org/content/10.1101/2022.08.04.502811).
+
+![case](./img/accuracy.png)
+<center>
+<small>
+Figure 2. Uni-Fold has similar performance on monomers and better performance on multimers compared with AlphaFold(-Multimer).
+</small>
+</center>
+
+&nbsp;
+
+![case](./img/train_time.png)
+<center>
+<small>
+Figure 3. Uni-Fold is to our knowledge the fastest implemetation of AlphaFold.
+</small>
+</center>
+
+&nbsp;
 
 The name Uni-Fold is inherited from our previous repository, [Uni-Fold-JAX](https://github.com/dptech-corp/Uni-Fold-jax). First released on Dec 8 2021, Uni-Fold-JAX was the first open-source project (with training scripts) that successfully reproduced the from-scratch training of AlphaFold. Until recently, Uni-Fold-JAX is still the only project that supports training of the original AlphaFold implementation in JAX framework. Due to efficiency and collaboration considerations, we moved from JAX to PyTorch on Jan 2022, based on which we further developed the multimer models.
 
+---
 
 ## Installation and Preparations
 
 ### Installing Uni-Fold
 
-As Uni-Core needs to compile CUDA kernels in installation, we also provide a docker image to save your efforts. To use the GPU within docker you need to install nvidia-docker2 first. Use the following command to pull the docker image:
+Uni-Fold is implemented on a distributed PyTorch framework, [Uni-Core](https://github.com/dptech-corp/Uni-Core). As Uni-Core needs to compile CUDA kernels in installation which requires specific CUDA and PyTorch versions, we provide a Docker image to save potential trouble.
+
+To use GPUs within docker you need to [install nvidia-docker-2](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker) first. Use the following command to pull the docker image:
 
 ```bash
 docker pull dptechnology/unifold:pytorch1.11.0-cuda11.3-latest
 ```
 
-Then, you can create and attach into docker container, and clone & install unifold.
+Then, you can create and attach into the docker container, and clone & install unifold.
 
 ```bash
 git clone https://github.com/dptech-corp/Uni-Fold
@@ -143,16 +177,25 @@ Besides the notices in the previous section, additionaly note that:
 1. The model architecture should be correctly specified by the model name.
 2. Checkpoints must be in Uni-Fold format (`*.pt`).
 
+## Inference on Hermite
+
+We provide covenient structure prediction service on [Hermite™](https://hermite.dp.tech/), a new-generation drug design platform powered by AI, physics, and computing. Users only need to upload sequences of protein monomers and multimers to obtain the predicted structures from Uni-Fold, acompanied by various analyzing tools. [Click here](https://docs.google.com/document/d/1iFdezkKJVuhyqN3WvzsC7-422T-zf18IhP7M9CBj5gs) for more information of how to use Hermite™.
 
 ## Citing this work
 
-Citation is coming soon :)
-
-<!-- If you use the code or data in this package, please cite:
+If you use the code, the model parameters, the web server at [Hermite™](https://hermite.dp.tech/), or the released data of Uni-Fold as well as [Uni-Fold-JAX](https://github.com/dptech-corp/Uni-Fold-jax), please cite
 
 ```bibtex
-
-``` -->
+@article {uni-fold,
+	author = {Li, Ziyao and Liu, Xuyang and Chen, Weijie and Shen, Fan and Bi, Hangrui and Ke, Guolin and Zhang, Linfeng},
+	title = {Uni-Fold: An Open-Source Platform for Developing Protein Folding Models beyond AlphaFold},
+	year = {2022},
+	doi = {10.1101/2022.08.04.502811},
+	URL = {https://www.biorxiv.org/content/early/2022/08/06/2022.08.04.502811},
+	eprint = {https://www.biorxiv.org/content/early/2022/08/06/2022.08.04.502811.full.pdf},
+	journal = {bioRxiv}
+}
+```
 
 ## Acknowledgements
 

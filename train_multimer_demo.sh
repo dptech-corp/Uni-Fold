@@ -12,5 +12,5 @@ python -m torch.distributed.launch --nproc_per_node=$n_gpu --master_port $MASTER
        --update-freq 1 --seed 42  --tensorboard-logdir $1/tsb/ \
        --max-update 1000 --max-epoch 1 --log-interval 1 --log-format simple \
        --save-interval-updates 100 --validate-interval-updates 100 --keep-interval-updates 5 --no-epoch-checkpoints  \
-       --save-dir $1 --tmp-save-dir $tmp_dir --required-batch-size-multiple 1 --ema-decay 0.999 --model-name multimer
+       --save-dir $1 --tmp-save-dir $tmp_dir --required-batch-size-multiple 1 --ema-decay 0.999 --model-name multimer --bf16 --bf16-sr # for V100 or older GPUs, you can disable --bf16 for faster speed.
 rm -rf $tmp_dir
