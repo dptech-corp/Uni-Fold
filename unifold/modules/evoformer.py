@@ -120,7 +120,7 @@ class EvoformerIteration(nn.Module):
         msa_mask: torch.Tensor,
         pair_mask: torch.Tensor,
         msa_row_attn_mask: torch.Tensor,
-        msa_col_attn_mask: torch.Tensor,
+        msa_col_attn_mask: Optional[torch.Tensor],
         tri_start_attn_mask: torch.Tensor,
         tri_end_attn_mask: torch.Tensor,
         chunk_size: Optional[int] = None,
