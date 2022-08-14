@@ -562,6 +562,16 @@ def model_config(name, train=False):
         recursive_set(c, "max_msa_clusters", 512)
         c.data.train.crop_size = 384
         c.loss.violation.weight = 0.02
+    elif name == "model_3_v2_ft" or name == "model_4_v2_ft":
+        c = model_2_v2(c)
+        recursive_set(c, "max_extra_msa", 5120)
+        recursive_set(c, "max_msa_clusters", 512)
+        c.data.train.crop_size = 384
+        c.loss.violation.weight = 0.02
+        c.model.template.enabled = False
+        c.model.template.embed_angles = False
+        recursive_set(c, "use_templates", False)
+        recursive_set(c, "use_template_torsion_angles", False)
     elif name == "model_3_af2" or name == "model_4_af2":
         recursive_set(c, "max_extra_msa", 5120)
         recursive_set(c, "max_msa_clusters", 512)
@@ -571,6 +581,16 @@ def model_config(name, train=False):
         c.model.heads.experimentally_resolved.enabled = True
         c.loss.experimentally_resolved.weight = 0.01
         c.globals.alphafold_original_mode = True
+        c.model.template.enabled = False
+        c.model.template.embed_angles = False
+        recursive_set(c, "use_templates", False)
+        recursive_set(c, "use_template_torsion_angles", False)
+    elif name == "model_5_v2_ft":
+        c = model_2_v2(c)
+        recursive_set(c, "max_extra_msa", 1024)
+        recursive_set(c, "max_msa_clusters", 512)
+        c.data.train.crop_size = 384
+        c.loss.violation.weight = 0.02
         c.model.template.enabled = False
         c.model.template.embed_angles = False
         recursive_set(c, "use_templates", False)
