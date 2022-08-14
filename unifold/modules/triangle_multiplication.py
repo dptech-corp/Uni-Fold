@@ -2,7 +2,7 @@ from functools import partialmethod
 from typing import Optional, List
 import torch
 import torch.nn as nn
-from .common import Linear, fused_bias_gated_dropout_add_inference
+from .common import Linear
 from unicore.utils import (
     permute_final_dims,
 )
