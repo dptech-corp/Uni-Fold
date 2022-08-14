@@ -25,7 +25,7 @@ setup(
     license="Apache License, Version 2.0",
     url="https://github.com/dptech-corp/Uni-Fold",
     packages=find_packages(
-        exclude=["scripts", "tests", "example_data", "docker", "benchmark"]
+        exclude=["scripts", "tests", "example_data", "docker", "benchmark", "img", "evaluation", "notebooks"]
     ),
     install_requires=[
         "absl-py",
