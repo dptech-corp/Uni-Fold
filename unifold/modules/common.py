@@ -251,19 +251,14 @@ def fused_bias_gated_dropout_add(
     ) + residual
 
 
-@torch.jit.script
-def fused_bias_gated_dropout_add_inference(
-    x: torch.Tensor,
-    bias: torch.Tensor,
-    g: torch.Tensor,
-    g_bias: torch.Tensor,
-    residual: torch.Tensor,
-) -> torch.Tensor:
-    return (torch.sigmoid(g + g_bias) * (x + bias)) + residual
-
-
-def bias_gated_dropout_residual(
-    module, residual, outputs, dropout_shared_dim, prob, training, chunk_size=None,
+def trimul_residual(
+    module,
+    residual,
+    outputs,
+    dropout_shared_dim,
+    prob,
+    training,
+    chunk_size=None,
 ):
     if training or chunk_size is None:
         x, g = outputs

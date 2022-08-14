@@ -10,7 +10,7 @@ from .common import (
     SimpleModuleList,
     residual,
     bias_dropout_residual,
-    bias_gated_dropout_residual,
+    trimul_residual,
 )
 from .attentions import (
     MSARowAttentionWithPairBias,
@@ -166,7 +166,7 @@ class EvoformerIteration(nn.Module):
                 self.training
             )
 
-        z = bias_gated_dropout_residual(
+        z = trimul_residual(
             self.tri_mul_out,
             z,
             self.tri_mul_out(z, mask=pair_mask, chunk_size=chunk_size),
@@ -176,7 +176,7 @@ class EvoformerIteration(nn.Module):
             chunk_size=chunk_size,
         )
 
-        z = bias_gated_dropout_residual(
+        z = trimul_residual(
             self.tri_mul_in,
             z,
             self.tri_mul_in(z, mask=pair_mask, chunk_size=chunk_size),
