@@ -312,7 +312,7 @@ class MSAColumnGlobalAttention(nn.Module):
     ) -> torch.Tensor:
         return chunk_layer(
             self._attn_forward,
-            {"x": m, "mask": mask},
+            {"m": m, "mask": mask},
             chunk_size=chunk_size,
             num_batch_dims=len(m.shape[:-2]),
         )
