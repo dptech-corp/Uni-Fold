@@ -9,7 +9,7 @@ from .common import (
     SimpleModuleList,
     residual,
     bias_dropout_residual,
-    trimul_residual,
+    tri_mul_residual,
 )
 from .common import Linear, Transition, chunk_layer
 from .attentions import (
@@ -179,7 +179,7 @@ class TemplatePairStackBlock(nn.Module):
                 self.dropout,
                 self.training,
             )
-            s = trimul_residual(
+            s = tri_mul_residual(
                 self.tri_mul_out,
                 s,
                 self.tri_mul_out(s, mask=mask),
@@ -188,7 +188,7 @@ class TemplatePairStackBlock(nn.Module):
                 self.training,
             )
 
-            s = trimul_residual(
+            s = tri_mul_residual(
                 self.tri_mul_in,
                 s,
                 self.tri_mul_in(s, mask=mask),
@@ -197,7 +197,7 @@ class TemplatePairStackBlock(nn.Module):
                 self.training,
             )
         else:
-            s = trimul_residual(
+            s = tri_mul_residual(
                 self.tri_mul_out,
                 s,
                 self.tri_mul_out(s, mask=mask),
@@ -206,7 +206,7 @@ class TemplatePairStackBlock(nn.Module):
                 self.training,
             )
 
-            s = trimul_residual(
+            s = tri_mul_residual(
                 self.tri_mul_in,
                 s,
                 self.tri_mul_in(s, mask=mask),

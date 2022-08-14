@@ -251,7 +251,7 @@ def fused_bias_gated_dropout_add(
     ) + residual
 
 
-def trimul_residual(
+def tri_mul_residual(
     module,
     residual,
     outputs,
