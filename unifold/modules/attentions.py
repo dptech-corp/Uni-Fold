@@ -180,36 +180,39 @@ class MSAAttention(nn.Module):
         chunk_size: int = None,
     ) -> torch.Tensor:
 
-        def chunk_forward(m, mask, bias: Optional[torch.Tensor] = None):
-            m = self.layer_norm_m(m)
-            return self.mha(q=m, k=m, v=m, mask=mask, bias=bias)
-
         return chunk_layer(
-            chunk_forward,
+            self._attn_forward,
             {"m": m, "mask": mask, "bias": bias},
             chunk_size=chunk_size,
             num_batch_dims=len(m.shape[:-2]),
         )
 
     @torch.jit.ignore
-    def _chunk_attn(
+    def _attn_chunk_forward(
         self,
         m: torch.Tensor,
         mask: Optional[torch.Tensor] = None,
         bias: Optional[torch.Tensor] = None,
         chunk_size: Optional[int] = 2560,
     ) -> torch.Tensor:
+        m = self.layer_norm_m(m)
         num_chunk = (m.shape[-3] + chunk_size - 1) // chunk_size
         outputs = []
         for i in range(num_chunk):
             chunk_start = i * chunk_size
-            chunk_end  = min(m.shape[-3], chunk_start + chunk_size)
-            cur_m = m[..., chunk_start: chunk_end , :, :]
-            cur_mask = mask[..., chunk_start: chunk_end, :, :, :] if mask is not None else None
+            chunk_end = min(m.shape[-3], chunk_start + chunk_size)
+            cur_m = m[..., chunk_start:chunk_end, :, :]
+            cur_mask = (
+                mask[..., chunk_start:chunk_end, :, :, :] if mask is not None else None
+            )
             outputs.append(
                 self.mha(q=cur_m, k=cur_m, v=cur_m, mask=cur_mask, bias=bias)
             )
         return torch.concat(outputs, dim=-3)
+
+    def _attn_forward(self, m, mask, bias: Optional[torch.Tensor] = None):
+        m = self.layer_norm_m(m)
+        return self.mha(q=m, k=m, v=m, mask=mask, bias=bias)
 
     def forward(
         self,
@@ -232,11 +235,13 @@ class MSAAttention(nn.Module):
             m = self._chunk(m, attn_mask, bias, chunk_size)
         else:
             attn_chunk_size = 2560
-            m = self.layer_norm_m(m)
             if m.shape[-3] <= attn_chunk_size:
-                m = self.mha(q=m, k=m, v=m, mask=attn_mask, bias=bias)
+                m = self._attn_forward(m, attn_mask, bias)
             else:
-                return self._chunk_attn(m, attn_mask, bias, chunk_size=attn_chunk_size)
+                # reduce the peak memory cost in extra_msa_stack
+                return self._attn_chunk_forward(
+                    m, attn_mask, bias, chunk_size=attn_chunk_size
+                )
 
         return m
 
@@ -306,11 +311,15 @@ class MSAColumnGlobalAttention(nn.Module):
         chunk_size: int,
     ) -> torch.Tensor:
         return chunk_layer(
-            self.global_attention,
+            self._attn_forward,
             {"x": m, "mask": mask},
             chunk_size=chunk_size,
             num_batch_dims=len(m.shape[:-2]),
         )
+
+    def _attn_forward(self, m, mask):
+        m = self.layer_norm_m(m)
+        return self.global_attention(m, mask=mask)
 
     def forward(
         self,
@@ -322,12 +331,10 @@ class MSAColumnGlobalAttention(nn.Module):
         m = m.transpose(-2, -3)
         mask = mask.transpose(-1, -2)
 
-        m = self.layer_norm_m(m)
-
         if chunk_size is not None:
             m = self._chunk(m, mask, chunk_size)
         else:
-            m = self.global_attention(m, mask=mask)
+            m = self._attn_forward(m, mask=mask)
 
         m = m.transpose(-2, -3)
         return m
