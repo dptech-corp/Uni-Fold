@@ -10,7 +10,7 @@ from .common import (
     SimpleModuleList,
     residual,
     bias_dropout_residual,
-    bias_gated_dropout_residual,
+    tri_mul_residual,
 )
 from .attentions import (
     MSARowAttentionWithPairBias,
@@ -128,7 +128,8 @@ class EvoformerIteration(nn.Module):
 
         if self.outer_product_mean_first:
             z = residual(
-                z, self.outer_product_mean(m, mask=msa_mask, chunk_size=chunk_size)
+                z, self.outer_product_mean(m, mask=msa_mask, chunk_size=chunk_size),
+                self.training
             )
 
         m = bias_dropout_residual(
@@ -142,7 +143,10 @@ class EvoformerIteration(nn.Module):
             self.training,
         )
         if self._is_extra_msa_stack:
-            m = residual(m, self.msa_att_col(m, mask=msa_mask, chunk_size=chunk_size))
+            m = residual(
+                m, self.msa_att_col(m, mask=msa_mask, chunk_size=chunk_size),
+                self.training
+            )
         else:
             m = bias_dropout_residual(
                 self.msa_att_col,
@@ -152,28 +156,34 @@ class EvoformerIteration(nn.Module):
                 self.msa_dropout,
                 self.training,
             )
-        m = residual(m, self.msa_transition(m, chunk_size=chunk_size))
+        m = residual(
+            m, self.msa_transition(m, chunk_size=chunk_size),
+            self.training
+        )
         if not self.outer_product_mean_first:
             z = residual(
-                z, self.outer_product_mean(m, mask=msa_mask, chunk_size=chunk_size)
+                z, self.outer_product_mean(m, mask=msa_mask, chunk_size=chunk_size),
+                self.training
             )
 
-        z = bias_gated_dropout_residual(
+        z = tri_mul_residual(
             self.tri_mul_out,
             z,
-            self.tri_mul_out(z, mask=pair_mask),
+            self.tri_mul_out(z, mask=pair_mask, chunk_size=chunk_size),
             self.row_dropout_share_dim,
             self.pair_dropout,
             self.training,
+            chunk_size=chunk_size,
         )
 
-        z = bias_gated_dropout_residual(
+        z = tri_mul_residual(
             self.tri_mul_in,
             z,
-            self.tri_mul_in(z, mask=pair_mask),
+            self.tri_mul_in(z, mask=pair_mask, chunk_size=chunk_size),
             self.row_dropout_share_dim,
             self.pair_dropout,
             self.training,
+            chunk_size=chunk_size,
         )
 
         z = bias_dropout_residual(
@@ -193,7 +203,10 @@ class EvoformerIteration(nn.Module):
             self.pair_dropout,
             self.training,
         )
-        z = residual(z, self.pair_transition(z, chunk_size=chunk_size))
+        z = residual(
+            z, self.pair_transition(z, chunk_size=chunk_size),
+            self.training
+        )
         return m, z
 
 
