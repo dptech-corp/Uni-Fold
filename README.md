@@ -6,16 +6,10 @@
 We proudly present Uni-Fold as a thoroughly open-source platform for developing protein models beyond [AlphaFold](https://github.com/deepmind/alphafold/). Uni-Fold introduces the following features:
 
 - Reimplemented AlphaFold and AlphaFold-Multimer models in PyTorch framework. **This is currently the first (if any else) open-source repository that supports training AlphaFold-Multimer.**
-
 - Model correctness proved by successful from-scratch training with equivalent accuracy, both monomer and multimer included.
-
 - Highest efficiency among existing AlphaFold implementations (to our knowledge).
-
 - Easy distributed training based on [Uni-Core](https://github.com/dptech-corp/Uni-Core/), as well as other conveniences including half-precision training (`float16/bfloat16`), per-sample gradient clipping, and fused CUDA kernels.
 
-- Convenient web server at [Hermite™](https://hermite.dp.tech/). [More Information](#inference-on-hermite)
-
-- Simplified version of Uni-Fold at Google Colab: [Uni-Fold Colab](https://colab.research.google.com/github/dptech-corp/Uni-Fold/blob/main/notebooks/unifold.ipynb).
 
 ![case](./img/7t6u.png)
 <center>
