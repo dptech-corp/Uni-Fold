@@ -1,4 +1,4 @@
-FROM dptechnology/unicore:pytorch1.11.0-cuda11.3-latest
+FROM dptechnology/0.0.1-unicore:pytorch1.11.0-cuda11.3
 
 # Use bash to support string substitution.
 SHELL ["/bin/bash", "-c"]
