@@ -141,13 +141,10 @@ class GlobalAttention(nn.Module):
         return self.linear_o(o)
 
 
-def gen_msa_attn_mask(mask, inf, gen_col_mask=True):
+def gen_msa_attn_mask(mask, inf):
     row_mask = gen_attn_mask(mask, -inf)[..., :, None, None, :]
-    if gen_col_mask:
-        col_mask = gen_attn_mask(mask.transpose(-1, -2), -inf)[..., :, None, None, :]
-        return row_mask, col_mask
-    else:
-        return row_mask
+    col_mask = gen_attn_mask(mask.transpose(-1, -2), -inf)[..., :, None, None, :]
+    return row_mask, col_mask
 
 
 class MSAAttention(nn.Module):
@@ -179,34 +176,17 @@ class MSAAttention(nn.Module):
         bias: Optional[torch.Tensor] = None,
         chunk_size: int = None,
     ) -> torch.Tensor:
+
+        def chunk_forward(m, mask, bias: Optional[torch.Tensor] = None):
+            m = self.layer_norm_m(m)
+            return self.mha(q=m, k=m, v=m, mask=mask, bias=bias)
+            
         return chunk_layer(
-            self.mha,
-            {"q": m, "k": m, "v": m, "mask": mask, "bias": bias},
+            chunk_forward,
+            {"m": m, "mask": mask, "bias": bias},
             chunk_size=chunk_size,
             num_batch_dims=len(m.shape[:-2]),
         )
-
-
-    @torch.jit.ignore
-    def _chunk_attn(
-        self,
-        m: torch.Tensor,
-        mask: Optional[torch.Tensor] = None,
-        bias: Optional[torch.Tensor] = None,
-        chunk_size: Optional[int] = 2560,
-    ) -> torch.Tensor:
-        num_chunk = (m.shape[-3] + chunk_size - 1) // chunk_size
-        outputs = []
-        for i in range(num_chunk):
-            chunk_start = i * chunk_size
-            chunk_end  = min(m.shape[-3], chunk_start + chunk_size)
-            cur_m = m[..., chunk_start: chunk_end , :, :]
-            cur_mask = mask[..., chunk_start: chunk_end, :, :, :] if mask is not None else None
-            outputs.append(
-                self.mha(q=cur_m, k=cur_m, v=cur_m, mask=cur_mask, bias=bias)
-            )
-        return torch.concat(outputs, dim=-3)
-
 
     def forward(
         self,
@@ -215,7 +195,7 @@ class MSAAttention(nn.Module):
         attn_mask: Optional[torch.Tensor] = None,
         chunk_size: Optional[int] = None,
     ) -> torch.Tensor:
-        m = self.layer_norm_m(m)
+
 
         bias = None
         if self.pair_bias:
@@ -229,11 +209,8 @@ class MSAAttention(nn.Module):
         if chunk_size is not None:
             m = self._chunk(m, attn_mask, bias, chunk_size)
         else:
-            attn_chunk_size = 2560
-            if m.shape[-3] <= attn_chunk_size:
-                m = self.mha(q=m, k=m, v=m, mask=attn_mask, bias=bias)
-            else:
-                return self._chunk_attn(m, attn_mask, bias, chunk_size=attn_chunk_size)
+            m = self.layer_norm_m(m)
+            m = self.mha(q=m, k=m, v=m, mask=attn_mask, bias=bias)
 
         return m
 

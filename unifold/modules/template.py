@@ -240,6 +240,7 @@ class TemplatePairStackBlock(nn.Module):
                 s,
                 chunk_size=chunk_size,
             ),
+            self.training
         )
         return s
 
