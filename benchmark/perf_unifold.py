@@ -60,6 +60,7 @@ class WrapEvoformerLayer(nn.Module):
         msa_col_attn_mask: torch.Tensor,
         tri_start_attn_mask: torch.Tensor,
         tri_end_attn_mask: torch.Tensor,
+        chunk_size: int,
     ):
         node, pair = self.EvoformerIteration(
             node,
@@ -70,6 +71,7 @@ class WrapEvoformerLayer(nn.Module):
             msa_col_attn_mask,
             tri_start_attn_mask,
             tri_end_attn_mask,
+            chunk_size=chunk_size,
         )
         return node, pair
 
@@ -92,6 +94,9 @@ def main():
     )
     parser.add_argument(
         "--layers", default=4, type=int, help="Evoformer Layers to Execute"
+    )
+    parser.add_argument(
+        "--chunk-size", default=None, type=int, help="Evoformer Layers to Execute"
     )
     parser.add_argument("--cm", default=256, type=int, help="MSA hidden dimension")
     parser.add_argument("--cz", default=128, type=int, help="Pair hidden dimension")
@@ -119,6 +124,8 @@ def main():
         attn_layers.append(WrapEvoformerLayer(d_node=args.cm, d_pair=args.cz))
         attn_layers[idx].cuda()
         attn_layers[idx].to(dtype=precision)
+        if args.fwd:
+            attn_layers[idx].eval()
 
     start_evt_fwd = []
     start_evt_bwd = []
@@ -176,7 +183,8 @@ def main():
                     msa_raw_mask,
                     msa_col_mask,
                     tri_start_mask,
-                    tri_end_mask
+                    tri_end_mask,
+                    chunk_size=args.chunk_size,
                 )
 
         torch.cuda.synchronize()
