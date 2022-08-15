@@ -1,18 +1,15 @@
 # Uni-Fold: an open-source platform for developing protein models beyond AlphaFold.
 
+[[bioRxiv](https://www.biorxiv.org/content/10.1101/2022.08.04.502811)], [[Uni-Fold Colab](https://colab.research.google.com/github/dptech-corp/Uni-Fold/blob/main/notebooks/unifold.ipynb)], [[Hermite™](https://hermite.dp.tech/)]
+
+
 We proudly present Uni-Fold as a thoroughly open-source platform for developing protein models beyond [AlphaFold](https://github.com/deepmind/alphafold/). Uni-Fold introduces the following features:
 
 - Reimplemented AlphaFold and AlphaFold-Multimer models in PyTorch framework. **This is currently the first (if any else) open-source repository that supports training AlphaFold-Multimer.**
-
 - Model correctness proved by successful from-scratch training with equivalent accuracy, both monomer and multimer included.
-
 - Highest efficiency among existing AlphaFold implementations (to our knowledge).
-
 - Easy distributed training based on [Uni-Core](https://github.com/dptech-corp/Uni-Core/), as well as other conveniences including half-precision training (`float16/bfloat16`), per-sample gradient clipping, and fused CUDA kernels.
 
-- Convenient web server at [Hermite™](https://hermite.dp.tech/). [More Information](#inference-on-hermite)
-
-- Simplified version of Uni-Fold at Google Colab: [Uni-Fold Colab](https://colab.research.google.com/github/dptech-corp/Uni-Fold/blob/main/notebooks/unifold.ipynb).
 
 ![case](./img/7t6u.png)
 <center>
@@ -23,7 +20,7 @@ Figure 1. Uni-Fold successfully predicted the interaction between the nanobody a
 
 &nbsp;
 
-We evaluated Uni-Fold on PDB structures release after our training set with less than 40% template identity. The structures for evaluations are included in [`evaluation`](./evaluation). Uni-Fold enjoys similar monomer prediction accuracy and better multimer prediction accuracy compared with AlphaFold(-Multimer). We also benchmarked the efficiency of Uni-Fold. The end-to-end training speed of Uni-Fold is about 2.2 times of the official AlphaFold. More evaluation results and details are included in our [bioRxiv preprint](https://www.biorxiv.org/content/10.1101/2022.08.04.502811).
+We evaluated Uni-Fold on PDB structures release after our training set with less than 40% template identity. The structures for evaluations are included in [`evaluation`](./evaluation). Uni-Fold enjoys similar monomer prediction accuracy and better multimer prediction accuracy compared with AlphaFold(-Multimer). We also benchmarked the efficiency of Uni-Fold. The end-to-end training efficiency is about 2.2 times of the official AlphaFold. More evaluation results and details are included in our [bioRxiv preprint](https://www.biorxiv.org/content/10.1101/2022.08.04.502811).
 
 ![case](./img/accuracy.png)
 <center>
@@ -51,12 +48,13 @@ The name Uni-Fold is inherited from our previous repository, [Uni-Fold-JAX](http
 
 ### Installing Uni-Fold
 
-Uni-Fold is implemented on a distributed PyTorch framework, [Uni-Core](https://github.com/dptech-corp/Uni-Core). As Uni-Core needs to compile CUDA kernels in installation which requires specific CUDA and PyTorch versions, we provide a Docker image to save potential trouble.
+Uni-Fold is implemented on a distributed PyTorch framework, [Uni-Core](https://github.com/dptech-corp/Uni-Core#installation). 
+As Uni-Core needs to compile CUDA kernels in installation which requires specific CUDA and PyTorch versions, we provide a Docker image to save potential trouble.
 
 To use GPUs within docker you need to [install nvidia-docker-2](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker) first. Use the following command to pull the docker image:
 
 ```bash
-docker pull dptechnology/unifold:pytorch1.11.0-cuda11.3-latest
+docker pull dptechnology/unifold:latest-pytorch1.11.0-cuda11.3
 ```
 
 Then, you can create and attach into the docker container, and clone & install unifold.
