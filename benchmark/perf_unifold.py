@@ -219,7 +219,7 @@ def main():
             args.cz,
             elapsed_time_fwd  / (args.trials * args.layers),
             elapsed_time_bwd  / (args.trials * args.layers),
-            total_used_mem_gb / (args.trials),
+            total_used_mem_gb / (args.trials + args.warmup_trials),
         )
     )
 
