@@ -181,7 +181,7 @@ We provide covenient structure prediction service on [Hermite™](https://hermit
 
 ## Features introduced by the community
 
-1. **Faster Inference with BladeDISC.** Alibaba PAI team proposed an end-to-end DynamIc Shape Compiler [BladeDISC](https://github.com/alibaba/BladeDISC), which optimized Uni-Fold to achieve faster inference speed and longer sequences inference. For detailed introduction, please see [examples](https://github.com/alibaba/BladeDISC/tree/main/examples/PyTorch/Inference/CUDA/AlphaFold) in BladeDISC.
+- **Faster Inference with BladeDISC.** Alibaba PAI team proposed an end-to-end DynamIc Shape Compiler [BladeDISC](https://github.com/alibaba/BladeDISC), which optimized Uni-Fold to achieve faster inference speed and longer sequences inference. For detailed introduction, please see [examples](https://github.com/alibaba/BladeDISC/tree/main/examples/PyTorch/Inference/CUDA/AlphaFold) in BladeDISC.
 
 ## Citing this work
 
