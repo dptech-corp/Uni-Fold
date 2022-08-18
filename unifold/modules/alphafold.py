@@ -128,6 +128,7 @@ class AlphaFold(nn.Module):
                 batch[key] = batch[key].type(self.dtype)
         return batch
 
+    # TODO: reduce the memory cost in template pair
     def embed_templates_pair(
         self, batch, z, pair_mask, tri_start_attn_mask, tri_end_attn_mask, templ_dim
     ):
@@ -180,7 +181,9 @@ class AlphaFold(nn.Module):
                 template_mask=batch["template_mask"],
                 chunk_size=self.globals.chunk_size,
             )
-            t *= torch.sum(batch["template_mask"]) > 0
+            t_mask = torch.sum(batch["template_mask"], dim=-1, keepdims=True) > 0
+            t_mask = t_mask[..., None, None].type(t.dtype)
+            t *= t_mask
         else:
             t = self.template_proj(t, z)
 
