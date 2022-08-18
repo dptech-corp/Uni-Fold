@@ -179,6 +179,10 @@ Besides the notices in the previous section, additionaly note that:
 
 We provide covenient structure prediction service on [Hermite™](https://hermite.dp.tech/), a new-generation drug design platform powered by AI, physics, and computing. Users only need to upload sequences of protein monomers and multimers to obtain the predicted structures from Uni-Fold, acompanied by various analyzing tools. [Click here](https://docs.google.com/document/d/1iFdezkKJVuhyqN3WvzsC7-422T-zf18IhP7M9CBj5gs) for more information of how to use Hermite™.
 
+## Further Inference Optimization
+
+1. Alibaba PAI team proposes an end-to-end DynamIc Shape Compiler [BladeDISC](https://github.com/alibaba/BladeDISC), which supports optimizing Uni-Fold to achieve faster inference speed and longer sequences inference. For detailed introduction, please see [examples](https://github.com/alibaba/BladeDISC/tree/main/examples/PyTorch/Inference/CUDA/AlphaFold) in BladeDISC.
+
 ## Citing this work
 
 If you use the code, the model parameters, the web server at [Hermite™](https://hermite.dp.tech/), or the released data of Uni-Fold as well as [Uni-Fold-JAX](https://github.com/dptech-corp/Uni-Fold-jax), please cite
