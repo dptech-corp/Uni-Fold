@@ -182,37 +182,41 @@ class TemplatePairStackBlock(nn.Module):
             s = tri_mul_residual(
                 self.tri_mul_out,
                 s,
-                self.tri_mul_out(s, mask=mask),
+                self.tri_mul_out(s, mask=mask, chunk_size=chunk_size),
                 self.row_dropout_share_dim,
                 self.dropout,
                 self.training,
+                chunk_size=chunk_size
             )
 
             s = tri_mul_residual(
                 self.tri_mul_in,
                 s,
-                self.tri_mul_in(s, mask=mask),
+                self.tri_mul_in(s, mask=mask, chunk_size=chunk_size),
                 self.row_dropout_share_dim,
                 self.dropout,
                 self.training,
+                chunk_size=chunk_size
             )
         else:
             s = tri_mul_residual(
                 self.tri_mul_out,
                 s,
-                self.tri_mul_out(s, mask=mask),
+                self.tri_mul_out(s, mask=mask, chunk_size=chunk_size),
                 self.row_dropout_share_dim,
                 self.dropout,
                 self.training,
+                chunk_size=chunk_size
             )
 
             s = tri_mul_residual(
                 self.tri_mul_in,
                 s,
-                self.tri_mul_in(s, mask=mask),
+                self.tri_mul_in(s, mask=mask, chunk_size=chunk_size),
                 self.row_dropout_share_dim,
                 self.dropout,
                 self.training,
+                chunk_size=chunk_size
             )
 
             s = bias_dropout_residual(
