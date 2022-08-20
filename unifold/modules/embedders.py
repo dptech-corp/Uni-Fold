@@ -182,7 +182,7 @@ class RecyclingEmbedder(nn.Module):
                 self.min_bin,
                 self.max_bin,
                 self.num_bins,
-                dtype=torch.float,
+                dtype=torch.float if self.training else x.dtype,
                 device=x.device,
                 requires_grad=False,
             )
@@ -190,10 +190,15 @@ class RecyclingEmbedder(nn.Module):
         upper = torch.cat(
             [self.squared_bins[1:], self.squared_bins.new_tensor([self.inf])], dim=-1
         )
-        xf = x.float()
-        d = torch.sum(
-            (xf[..., None, :] - xf[..., None, :, :]) ** 2, dim=-1, keepdims=True
-        )
+        if self.training:
+            xf = x.float()
+            d = torch.sum(
+                (xf[..., None, :] - xf[..., None, :, :]) ** 2, dim=-1, keepdims=True
+            )
+        else:
+            d = torch.sum(
+                (x[..., None, :] - x[..., None, :, :]) ** 2, dim=-1, keepdims=True
+            )
         d = ((d > self.squared_bins) * (d < upper)).type(self.linear.weight.dtype)
         d = self.linear(d)
         return d

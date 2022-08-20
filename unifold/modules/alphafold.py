@@ -108,7 +108,8 @@ class AlphaFold(nn.Module):
 
     def bfloat16(self):
         super().bfloat16()
-        self.__make_input_float__()
+        if self.training:
+            self.__make_input_float__()
         self.dtype = torch.bfloat16
         return self
 
@@ -251,7 +252,17 @@ class AlphaFold(nn.Module):
         if self.config.template.enabled:
             template_mask = feats["template_mask"]
             if torch.any(template_mask):
-                z = z + self.embed_templates_pair(
+                if self.training and torch.is_grad_enabled():
+                    z = z + self.embed_templates_pair(
+                        feats,
+                        z,
+                        pair_mask,
+                        tri_start_attn_mask,
+                        tri_end_attn_mask,
+                        templ_dim=-4,
+                    )
+                else:
+                    z += self.embed_templates_pair(
                     feats,
                     z,
                     pair_mask,
@@ -349,9 +360,10 @@ class AlphaFold(nn.Module):
         outputs["pred_frame_tensor"] = outputs["sm"]["frames"][-1]
 
         # use float32 for numerical stability
-        m_1_prev = m[..., 0, :, :].float()
-        z_prev = z.float()
-        x_prev = outputs["final_atom_positions"].float()
+        if self.training:
+            m_1_prev = m[..., 0, :, :].float()
+            z_prev = z.float()
+            x_prev = outputs["final_atom_positions"].float()
 
         return outputs, m_1_prev, z_prev, x_prev
 
@@ -388,6 +400,8 @@ class AlphaFold(nn.Module):
                     num_recycling=num_iters,
                     num_ensembles=num_ensembles,
                 )
+            if not is_final_iter:
+                del outputs
 
         if "asym_id" in batch:
             outputs["asym_id"] = batch["asym_id"][0, ...]

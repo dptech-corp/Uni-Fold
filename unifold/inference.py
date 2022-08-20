@@ -118,7 +118,7 @@ def main(args):
             shapes = {k: v.shape for k, v in batch.items()}
             print(shapes)
             t = time.perf_counter()
-            out = model(batch)
+            raw_out = model(batch)
             print(f"Inference time: {time.perf_counter() - t}")
 
         def to_float(x):
@@ -127,6 +127,14 @@ def main(args):
             else:
                 return x
 
+        if not args.save_raw_output:
+            score = ["plddt", "ptm", "iptm", "iptm+ptm"]
+            out = {
+                    k: v for k, v in raw_out.items()
+                    if k.startswith("final_") or k in score
+                }
+        else:
+            out = raw_out
         # Toss out the recycling dimensions --- we don't need them anymore
         batch = tensor_tree_map(lambda t: t[-1, 0, ...], batch)
         batch = tensor_tree_map(to_float, batch)
@@ -152,8 +160,9 @@ def main(args):
             ptms[cur_save_name] = str(np.mean(out["iptm+ptm"]))
         with open(os.path.join(output_dir, cur_save_name + '.pdb'), "w") as f:
             f.write(protein.to_pdb(cur_protein))
-        with gzip.open(os.path.join(output_dir, cur_save_name + '_outputs.pkl.gz'), 'wb') as f:
-            pickle.dump(out, f)
+        if args.save_raw_output:
+            with gzip.open(os.path.join(output_dir, cur_save_name + '_outputs.pkl.gz'), 'wb') as f:
+                pickle.dump(out, f)
 
     print("plddts", plddts)
     score_name = f"{args.model_name}_{cur_param_path_postfix}_{args.data_random_seed}_{args.times}{name_postfix}"
@@ -220,6 +229,7 @@ if __name__ == "__main__":
     parser.add_argument("--sample_templates", action="store_true")
     parser.add_argument("--use_uniprot", action="store_true")
     parser.add_argument("--bf16", action="store_true")
+    parser.add_argument("--save_raw_output", action="store_true")
 
     args = parser.parse_args()
 
