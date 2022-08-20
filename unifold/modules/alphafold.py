@@ -364,6 +364,10 @@ class AlphaFold(nn.Module):
             m_1_prev = m[..., 0, :, :].float()
             z_prev = z.float()
             x_prev = outputs["final_atom_positions"].float()
+        else:
+            m_1_prev = m[..., 0, :, :]
+            z_prev = z
+            x_prev = outputs["final_atom_positions"]
 
         return outputs, m_1_prev, z_prev, x_prev
 
