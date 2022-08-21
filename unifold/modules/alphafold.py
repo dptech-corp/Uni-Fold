@@ -339,7 +339,7 @@ class AlphaFold(nn.Module):
         outputs["single"] = s
 
         # norm loss
-        if num_recycling == (cycle_no + 1):
+        if self.training and num_recycling == (cycle_no + 1):
             delta_msa = m
             delta_msa[..., 0, :, :] = delta_msa[..., 0, :, :] - m_1_prev_emb.detach()
             delta_pair = z - z_prev_emb.detach()

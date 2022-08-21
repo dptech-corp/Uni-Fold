@@ -135,6 +135,7 @@ def main(args):
                 }
         else:
             out = raw_out
+        del raw_out
         # Toss out the recycling dimensions --- we don't need them anymore
         batch = tensor_tree_map(lambda t: t[-1, 0, ...], batch)
         batch = tensor_tree_map(to_float, batch)
@@ -163,6 +164,7 @@ def main(args):
         if args.save_raw_output:
             with gzip.open(os.path.join(output_dir, cur_save_name + '_outputs.pkl.gz'), 'wb') as f:
                 pickle.dump(out, f)
+        del out
 
     print("plddts", plddts)
     score_name = f"{args.model_name}_{cur_param_path_postfix}_{args.data_random_seed}_{args.times}{name_postfix}"

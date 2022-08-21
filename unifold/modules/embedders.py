@@ -259,14 +259,16 @@ class TemplatePairEmbedder(nn.Module):
     ) -> torch.Tensor:
         if not self.v2_feature:
             x = self.linear(x.type(self.linear.weight.dtype))
+            return x
         else:
-            t = 0
+            t = self.z_linear(self.z_layer_norm(z))
             for i, s in enumerate(x):
                 dtype = self.z_linear.weight.dtype
-                t = t + self.linear[i](s.type(dtype))
-            t = t + self.z_linear(self.z_layer_norm(z))
-            x = t
-        return x
+                if self.training and torch.is_grad_enabled():
+                    t = t + self.linear[i](s.type(dtype))
+                else:
+                    t += self.linear[i](s.type(dtype))
+            return t
 
 
 class ExtraMSAEmbedder(nn.Module):
