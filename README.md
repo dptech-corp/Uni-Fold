@@ -1,6 +1,6 @@
 # Uni-Fold: an open-source platform for developing protein models beyond AlphaFold.
 
-[[bioRxiv](https://www.biorxiv.org/content/10.1101/2022.08.04.502811)], [[Uni-Fold Colab](https://colab.research.google.com/github/dptech-corp/Uni-Fold/blob/main/notebooks/unifold.ipynb)], [[Hermite™](https://hermite.dp.tech/)]
+[[bioRxiv](https://www.biorxiv.org/content/10.1101/2022.08.04.502811v2)], [[Uni-Fold Colab](https://colab.research.google.com/github/dptech-corp/Uni-Fold/blob/main/notebooks/unifold.ipynb)], [[Hermite™](https://hermite.dp.tech/)]
 
 
 We proudly present Uni-Fold as a thoroughly open-source platform for developing protein models beyond [AlphaFold](https://github.com/deepmind/alphafold/). Uni-Fold introduces the following features:
@@ -20,7 +20,7 @@ Figure 1. Uni-Fold successfully predicted the interaction between the nanobody a
 
 &nbsp;
 
-We evaluated Uni-Fold on PDB structures release after our training set with less than 40% template identity. The structures for evaluations are included in [`evaluation`](./evaluation). Uni-Fold enjoys similar monomer prediction accuracy and better multimer prediction accuracy compared with AlphaFold(-Multimer). We also benchmarked the efficiency of Uni-Fold. The end-to-end training efficiency is about 2.2 times of the official AlphaFold. More evaluation results and details are included in our [bioRxiv preprint](https://www.biorxiv.org/content/10.1101/2022.08.04.502811).
+We evaluated Uni-Fold on PDB structures release after our training set with less than 40% template identity. The structures for evaluations are included in [`evaluation`](./evaluation). Uni-Fold enjoys similar monomer prediction accuracy and better multimer prediction accuracy compared with AlphaFold(-Multimer). We also benchmarked the efficiency of Uni-Fold. The end-to-end training efficiency is about 2.2 times of the official AlphaFold. More evaluation results and details are included in our [bioRxiv preprint](https://www.biorxiv.org/content/10.1101/2022.08.04.502811v2).
 
 ![case](./img/accuracy.png)
 <center>
@@ -193,8 +193,8 @@ If you use the code, the model parameters, the web server at [Hermite™](https:
 	title = {Uni-Fold: An Open-Source Platform for Developing Protein Folding Models beyond AlphaFold},
 	year = {2022},
 	doi = {10.1101/2022.08.04.502811},
-	URL = {https://www.biorxiv.org/content/early/2022/08/06/2022.08.04.502811},
-	eprint = {https://www.biorxiv.org/content/early/2022/08/06/2022.08.04.502811.full.pdf},
+	URL = {https://www.biorxiv.org/content/10.1101/2022.08.04.502811v2},
+	eprint = {https://www.biorxiv.org/content/10.1101/2022.08.04.502811v2.full.pdf},
 	journal = {bioRxiv}
 }
 ```
