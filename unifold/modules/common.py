@@ -173,8 +173,12 @@ class OuterProductMean(nn.Module):
             mask = mask * (mask.size(-2) ** -0.5)
         a = self.linear_1(m)
         b = self.linear_2(m)
-        a = a * mask
-        b = b * mask
+        if self.training:
+            a = a * mask
+            b = b * mask
+        else:
+            a *= mask
+            b *= mask
 
         a = a.transpose(-2, -3)
         b = b.transpose(-2, -3)
