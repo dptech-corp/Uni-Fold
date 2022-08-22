@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 
 from unicore.utils import one_hot
 
-from .common import Linear
+from .common import Linear, residual
 from .common import SimpleModuleList
 from unicore.modules import LayerNorm
 
@@ -182,7 +182,7 @@ class RecyclingEmbedder(nn.Module):
                 self.min_bin,
                 self.max_bin,
                 self.num_bins,
-                dtype=torch.float,
+                dtype=torch.float if self.training else x.dtype,
                 device=x.device,
                 requires_grad=False,
             )
@@ -190,9 +190,10 @@ class RecyclingEmbedder(nn.Module):
         upper = torch.cat(
             [self.squared_bins[1:], self.squared_bins.new_tensor([self.inf])], dim=-1
         )
-        xf = x.float()
+        if self.training:
+            x = x.float()
         d = torch.sum(
-            (xf[..., None, :] - xf[..., None, :, :]) ** 2, dim=-1, keepdims=True
+            (x[..., None, :] - x[..., None, :, :]) ** 2, dim=-1, keepdims=True
         )
         d = ((d > self.squared_bins) * (d < upper)).type(self.linear.weight.dtype)
         d = self.linear(d)
@@ -254,14 +255,14 @@ class TemplatePairEmbedder(nn.Module):
     ) -> torch.Tensor:
         if not self.v2_feature:
             x = self.linear(x.type(self.linear.weight.dtype))
+            return x
         else:
-            t = 0
-            for i, s in enumerate(x):
-                dtype = self.z_linear.weight.dtype
-                t = t + self.linear[i](s.type(dtype))
-            t = t + self.z_linear(self.z_layer_norm(z))
-            x = t
-        return x
+            dtype = self.z_linear.weight.dtype
+            t = self.linear[0](x[0].type(dtype))
+            for i, s in enumerate(x[1:]):
+                t = residual(t, self.linear[i + 1](s.type(dtype)), self.training)
+            t = residual(t, self.z_linear(self.z_layer_norm(z)), self.training)
+            return t
 
 
 class ExtraMSAEmbedder(nn.Module):

@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from typing import Tuple
 
-from .common import Linear, SimpleModuleList
+from .common import Linear, SimpleModuleList, residual
 from .attentions import gen_attn_mask
 from unifold.data.residue_constants import (
     restype_rigid_group_default_frame,
@@ -117,7 +117,7 @@ class SideChainAngleResnetIteration(nn.Module):
         x = self.act(x)
         x = self.linear_2(x)
 
-        return x + s
+        return residual(s, x, self.training)
 
 
 class SidechainAngleResnet(nn.Module):
@@ -274,11 +274,17 @@ class InvariantPointAttention(nn.Module):
             permute_final_dims(q, (1, 0, 2)),
             permute_final_dims(k, (1, 2, 0)),
         )
-        attn = attn * math.sqrt(1.0 / (3 * self.d_hid))
-        attn = attn + (math.sqrt(1.0 / 3) * permute_final_dims(bias, (2, 0, 1)))
 
-        pt_att = q_pts.unsqueeze(-4) - k_pts.unsqueeze(-5)
-        pt_att = pt_att.float() ** 2
+        if self.training:
+            attn = attn * math.sqrt(1.0 / (3 * self.d_hid))
+            attn = attn + (math.sqrt(1.0 / 3) * permute_final_dims(bias, (2, 0, 1)))
+            pt_att = q_pts.unsqueeze(-4) - k_pts.unsqueeze(-5)
+            pt_att = pt_att.float() ** 2
+        else:
+            attn *= math.sqrt(1.0 / (3 * self.d_hid))
+            attn += (math.sqrt(1.0 / 3) * permute_final_dims(bias, (2, 0, 1)))
+            pt_att = q_pts.unsqueeze(-4) - k_pts.unsqueeze(-5)
+            pt_att *= pt_att
 
         pt_att = pt_att.sum(dim=-1)
         head_weights = self.softplus(self.head_weights).view(
@@ -294,7 +300,7 @@ class InvariantPointAttention(nn.Module):
         pt_att = permute_final_dims(pt_att, (2, 0, 1))
         attn += square_mask
         attn = softmax_dropout(attn, 0, self.training, bias=pt_att.type(attn.dtype))
-
+        del pt_att, q_pts, k_pts
         o = torch.matmul(attn, v.transpose(-2, -3)).transpose(-2, -3)
         o = o.contiguous().view(*o.shape[:-2], -1)
 
@@ -308,10 +314,14 @@ class InvariantPointAttention(nn.Module):
 
         o_pts = permute_final_dims(o_pts, (2, 0, 3, 1))
         o_pts = f[..., None, None].invert_apply(o_pts)
-
-        o_pts_norm = torch.sqrt(torch.sum(o_pts.float() ** 2, dim=-1) + self.eps).type(
-            o_pts.dtype
-        )
+        if self.training:
+            o_pts_norm = torch.sqrt(torch.sum(o_pts.float() ** 2, dim=-1) + self.eps).type(
+                o_pts.dtype
+            )
+        else:
+            o_pts_norm = torch.sqrt(torch.sum(o_pts ** 2, dim=-1) + self.eps).type(
+                o_pts.dtype
+            )
 
         o_pts_norm = o_pts_norm.view(*o_pts_norm.shape[:-2], -1)
 
@@ -354,7 +364,7 @@ class StructureModuleTransitionLayer(nn.Module):
         s = self.act(s)
         s = self.linear_3(s)
 
-        s = s + s_old
+        s = residual(s_old, s, self.training)
 
         return s
 
@@ -482,8 +492,7 @@ class StructureModule(nn.Module):
         )
         outputs = []
         for i in range(self.num_blocks):
-
-            s = s + self.ipa(s, z, backb_to_global, square_mask)
+            s = residual(s, self.ipa(s, z, backb_to_global, square_mask), self.training)
             s = self.ipa_dropout(s)
             s = self.layer_norm_ipa(s)
             s = self.transition(s)
