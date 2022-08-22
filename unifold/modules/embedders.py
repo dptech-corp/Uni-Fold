@@ -257,10 +257,11 @@ class TemplatePairEmbedder(nn.Module):
             x = self.linear(x.type(self.linear.weight.dtype))
             return x
         else:
-            t = self.z_linear(self.z_layer_norm(z))
-            for i, s in enumerate(x):
-                dtype = self.z_linear.weight.dtype
-                t = residual(t, self.linear[i](s.type(dtype)), self.training)
+            dtype = self.z_linear.weight.dtype
+            t = self.linear[0](x[0].type(dtype))
+            for i, s in enumerate(x[1:]):
+                t = residual(t, self.linear[i + 1](s.type(dtype)), self.training)
+            t = residual(t, self.z_linear(self.z_layer_norm(z)), self.training)
             return t
 
 
