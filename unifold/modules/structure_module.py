@@ -274,17 +274,16 @@ class InvariantPointAttention(nn.Module):
             permute_final_dims(q, (1, 0, 2)),
             permute_final_dims(k, (1, 2, 0)),
         )
-        if self.training and torch.is_grad_enabled():
+
+        if self.training:
             attn = attn * math.sqrt(1.0 / (3 * self.d_hid))
             attn = attn + (math.sqrt(1.0 / 3) * permute_final_dims(bias, (2, 0, 1)))
+            pt_att = q_pts.unsqueeze(-4) - k_pts.unsqueeze(-5)
+            pt_att = pt_att.float() ** 2
         else:
             attn *= math.sqrt(1.0 / (3 * self.d_hid))
             attn += (math.sqrt(1.0 / 3) * permute_final_dims(bias, (2, 0, 1)))
-        pt_att = q_pts.unsqueeze(-4) - k_pts.unsqueeze(-5)
-        if self.training:
-            pt_att = pt_att.float()
-            pt_att = pt_att ** 2
-        else:
+            pt_att = q_pts.unsqueeze(-4) - k_pts.unsqueeze(-5)
             pt_att *= pt_att
 
         pt_att = pt_att.sum(dim=-1)

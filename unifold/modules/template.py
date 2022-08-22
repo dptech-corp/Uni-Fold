@@ -159,9 +159,6 @@ class TemplatePairStackBlock(nn.Module):
         tri_end_attn_mask: torch.Tensor,
         chunk_size: Optional[int] = None,
     ):
-        if self.training:
-            # avoid inplace error for checkpointing
-            s = s.clone()
         if self.tri_attn_first:
             s = bias_dropout_residual(
                 self.tri_att_start,

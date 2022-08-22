@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 
 from unicore.utils import one_hot
 
-from .common import Linear
+from .common import Linear, residual
 from .common import SimpleModuleList
 from unicore.modules import LayerNorm
 
@@ -260,10 +260,7 @@ class TemplatePairEmbedder(nn.Module):
             t = self.z_linear(self.z_layer_norm(z))
             for i, s in enumerate(x):
                 dtype = self.z_linear.weight.dtype
-                if self.training and torch.is_grad_enabled():
-                    t = t + self.linear[i](s.type(dtype))
-                else:
-                    t += self.linear[i](s.type(dtype))
+                t = residual(t, self.linear[i](s.type(dtype)), self.training)
             return t
 
 

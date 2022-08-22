@@ -173,8 +173,12 @@ class OuterProductMean(nn.Module):
             mask = mask * (mask.size(-2) ** -0.5)
         a = self.linear_1(m)
         b = self.linear_2(m)
-        a = a * mask
-        b = b * mask
+        if self.training:
+            a = a * mask
+            b = b * mask
+        else:
+            a *= mask
+            b *= mask
 
         a = a.transpose(-2, -3)
         b = b.transpose(-2, -3)
@@ -194,7 +198,7 @@ class OuterProductMean(nn.Module):
 
 
 def residual(residual, x, training):
-    if training and torch.is_grad_enabled():
+    if training:
         return x + residual
     else:
         residual += x
@@ -210,18 +214,6 @@ def fused_bias_dropout_add(
     prob: float,
 ) -> torch.Tensor:
     return (x + bias) * F.dropout(dropmask, p=prob, training=True) + residual
-
-
-@torch.jit.script
-def fused_bias_dropout_add_inplace(
-    x: torch.Tensor,
-    bias: torch.Tensor,
-    residual: torch.Tensor,
-    dropmask: torch.Tensor,
-    prob: float,
-) -> torch.Tensor:
-    residual += (x + bias) * F.dropout(dropmask, p=prob, training=True)
-    return residual
 
 
 @torch.jit.script
@@ -241,10 +233,7 @@ def bias_dropout_residual(module, residual, x, dropout_shared_dim, prob, trainin
         shape[dropout_shared_dim] = 1
         with torch.no_grad():
             mask = x.new_ones(shape)
-        if torch.is_grad_enabled():
-            return fused_bias_dropout_add(x, bias, residual, mask, prob)
-        else:
-            return fused_bias_dropout_add_inplace(x, bias, residual, mask, prob)
+        return fused_bias_dropout_add(x, bias, residual, mask, prob)
     else:
         return fused_bias_dropout_add_inference(x, bias, residual)
 
@@ -265,23 +254,6 @@ def fused_bias_gated_dropout_add(
         training=True,
     ) + residual
 
-@torch.jit.script
-def fused_bias_gated_dropout_add_inplace(
-    x: torch.Tensor,
-    bias: torch.Tensor,
-    g: torch.Tensor,
-    g_bias: torch.Tensor,
-    residual: torch.Tensor,
-    dropout_mask: torch.Tensor,
-    prob: float,
-) -> torch.Tensor:
-    residual += (torch.sigmoid(g + g_bias) * (x + bias)) * F.dropout(
-        dropout_mask,
-        p=prob,
-        training=True,
-    )
-    return residual
-
 
 def tri_mul_residual(
     module,
@@ -299,26 +271,15 @@ def tri_mul_residual(
         shape[dropout_shared_dim] = 1
         with torch.no_grad():
             mask = x.new_ones(shape)
-        if torch.is_grad_enabled():
-            return fused_bias_gated_dropout_add(
-                x,
-                bias,
-                g,
-                g_bias,
-                residual,
-                mask,
-                prob,
-            )
-        else:
-            return fused_bias_gated_dropout_add_inplace(
-                x,
-                bias,
-                g,
-                g_bias,
-                residual,
-                mask,
-                prob,
-            )
+        return fused_bias_gated_dropout_add(
+            x,
+            bias,
+            g,
+            g_bias,
+            residual,
+            mask,
+            prob,
+        )
     else:
         # gated is not used here
         residual += outputs
