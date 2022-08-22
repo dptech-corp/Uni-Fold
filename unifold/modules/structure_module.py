@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from typing import Tuple
 
-from .common import Linear, SimpleModuleList
+from .common import Linear, SimpleModuleList, residual
 from .attentions import gen_attn_mask
 from unifold.data.residue_constants import (
     restype_rigid_group_default_frame,
@@ -117,7 +117,7 @@ class SideChainAngleResnetIteration(nn.Module):
         x = self.act(x)
         x = self.linear_2(x)
 
-        return x + s
+        return residual(s, x, self.training)
 
 
 class SidechainAngleResnet(nn.Module):
@@ -365,7 +365,7 @@ class StructureModuleTransitionLayer(nn.Module):
         s = self.act(s)
         s = self.linear_3(s)
 
-        s = s + s_old
+        s = residual(s_old, s, self.training)
 
         return s
 
@@ -493,10 +493,7 @@ class StructureModule(nn.Module):
         )
         outputs = []
         for i in range(self.num_blocks):
-            if self.training and torch.is_grad_enabled():
-                s = s + self.ipa(s, z, backb_to_global, square_mask)
-            else:
-                s += self.ipa(s, z, backb_to_global, square_mask)
+            s = residual(s, self.ipa(s, z, backb_to_global, square_mask), self.training)
             s = self.ipa_dropout(s)
             s = self.layer_norm_ipa(s)
             s = self.transition(s)

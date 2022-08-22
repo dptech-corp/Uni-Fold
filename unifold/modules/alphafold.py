@@ -1,6 +1,10 @@
 import torch
 import torch.nn as nn
 
+from .common import (
+    residual,
+)
+
 from .featurization import (
     pseudo_beta_fn,
     build_extra_msa_feat,
@@ -102,7 +106,8 @@ class AlphaFold(nn.Module):
 
     def half(self):
         super().half()
-        self.__make_input_float__()
+        if self.training:
+            self.__make_input_float__()
         self.dtype = torch.half
         return self
 
@@ -252,23 +257,17 @@ class AlphaFold(nn.Module):
         if self.config.template.enabled:
             template_mask = feats["template_mask"]
             if torch.any(template_mask):
-                if self.training and torch.is_grad_enabled():
-                    z = z + self.embed_templates_pair(
+                z = residual(
+                    z, 
+                    self.embed_templates_pair(
                         feats,
                         z,
                         pair_mask,
                         tri_start_attn_mask,
                         tri_end_attn_mask,
                         templ_dim=-4,
-                    )
-                else:
-                    z += self.embed_templates_pair(
-                    feats,
-                    z,
-                    pair_mask,
-                    tri_start_attn_mask,
-                    tri_end_attn_mask,
-                    templ_dim=-4,
+                    ),
+                    self.training,
                 )
 
         if self.config.extra_msa.enabled:

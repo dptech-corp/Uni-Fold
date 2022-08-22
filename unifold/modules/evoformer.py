@@ -126,6 +126,10 @@ class EvoformerIteration(nn.Module):
         chunk_size: Optional[int] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
 
+        if self.training:
+            # avoid inplace error for checkpointing
+            m = m.clone()
+            z = z.clone()
         if self.outer_product_mean_first:
             z = residual(
                 z, self.outer_product_mean(m, mask=msa_mask, chunk_size=chunk_size),
