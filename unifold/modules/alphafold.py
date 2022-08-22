@@ -1,6 +1,10 @@
 import torch
 import torch.nn as nn
 
+from .common import (
+    residual,
+)
+
 from .featurization import (
     pseudo_beta_fn,
     build_extra_msa_feat,
@@ -102,13 +106,15 @@ class AlphaFold(nn.Module):
 
     def half(self):
         super().half()
-        self.__make_input_float__()
+        if self.training:
+            self.__make_input_float__()
         self.dtype = torch.half
         return self
 
     def bfloat16(self):
         super().bfloat16()
-        self.__make_input_float__()
+        if self.training:
+            self.__make_input_float__()
         self.dtype = torch.bfloat16
         return self
 
@@ -251,13 +257,17 @@ class AlphaFold(nn.Module):
         if self.config.template.enabled:
             template_mask = feats["template_mask"]
             if torch.any(template_mask):
-                z = z + self.embed_templates_pair(
-                    feats,
-                    z,
-                    pair_mask,
-                    tri_start_attn_mask,
-                    tri_end_attn_mask,
-                    templ_dim=-4,
+                z = residual(
+                    z, 
+                    self.embed_templates_pair(
+                        feats,
+                        z,
+                        pair_mask,
+                        tri_start_attn_mask,
+                        tri_end_attn_mask,
+                        templ_dim=-4,
+                    ),
+                    self.training,
                 )
 
         if self.config.extra_msa.enabled:
@@ -328,7 +338,7 @@ class AlphaFold(nn.Module):
         outputs["single"] = s
 
         # norm loss
-        if num_recycling == (cycle_no + 1):
+        if self.training and num_recycling == (cycle_no + 1):
             delta_msa = m
             delta_msa[..., 0, :, :] = delta_msa[..., 0, :, :] - m_1_prev_emb.detach()
             delta_pair = z - z_prev_emb.detach()
@@ -349,9 +359,14 @@ class AlphaFold(nn.Module):
         outputs["pred_frame_tensor"] = outputs["sm"]["frames"][-1]
 
         # use float32 for numerical stability
-        m_1_prev = m[..., 0, :, :].float()
-        z_prev = z.float()
-        x_prev = outputs["final_atom_positions"].float()
+        if self.training:
+            m_1_prev = m[..., 0, :, :].float()
+            z_prev = z.float()
+            x_prev = outputs["final_atom_positions"].float()
+        else:
+            m_1_prev = m[..., 0, :, :]
+            z_prev = z
+            x_prev = outputs["final_atom_positions"]
 
         return outputs, m_1_prev, z_prev, x_prev
 
@@ -388,6 +403,8 @@ class AlphaFold(nn.Module):
                     num_recycling=num_iters,
                     num_ensembles=num_ensembles,
                 )
+            if not is_final_iter:
+                del outputs
 
         if "asym_id" in batch:
             outputs["asym_id"] = batch["asym_id"][0, ...]
