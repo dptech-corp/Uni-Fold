@@ -1,5 +1,6 @@
 from functools import partial
 from typing import Optional, List, Tuple
+import math
 
 import torch
 import torch.nn as nn
@@ -17,6 +18,7 @@ from .attentions import (
     TriangleAttentionStarting,
     TriangleAttentionEnding,
 )
+from .featurization import build_template_pair_feat_v2
 from .triangle_multiplication import (
     TriangleMultiplicationOutgoing,
     TriangleMultiplicationIncoming,
@@ -24,6 +26,7 @@ from .triangle_multiplication import (
 from unicore.utils import (
     checkpoint_sequential,
     permute_final_dims,
+    tensor_tree_map
 )
 from unicore.modules import LayerNorm
 
@@ -327,3 +330,80 @@ class TemplatePairStack(nn.Module):
             t = self.layer_norm(t)
 
         return t
+
+
+def embed_templates_average(
+    model,
+    batch,
+    z,
+    pair_mask,
+    tri_start_attn_mask,
+    tri_end_attn_mask,
+    templ_dim,
+    templ_group_size=1
+):
+    #embed the template one by one
+    n_templ = batch["template_aatype"].shape[templ_dim]
+    denom = math.ceil(n_templ / templ_group_size)
+    template_batch = {
+                        k: v for k, v in batch.items()
+                        if k.startswith("template_")
+                    }
+
+    if "asym_id" in batch:
+        multichain_mask_2d = (
+            batch["asym_id"][..., :, None] == batch["asym_id"][..., None, :]
+        )
+        multichain_mask_2d = multichain_mask_2d.unsqueeze(0)
+    else:
+        multichain_mask_2d = None
+
+    out_t = 0
+    for i in range(0, n_templ, templ_group_size):
+        def slice_template_tensor(t):
+            s = [slice(None) for _ in t.shape]
+            s[templ_dim] = slice(i, i + templ_group_size)
+            return t[s]
+
+        template_feats = tensor_tree_map(
+            slice_template_tensor,
+            template_batch,
+        )
+
+        t = build_template_pair_feat_v2(
+            template_feats,
+            inf=model.config.template.inf,
+            eps=model.config.template.eps,
+            multichain_mask_2d=multichain_mask_2d,
+            **model.config.template.distogram,
+        )
+
+        t = model.template_pair_embedder(t, z)
+        t = model.template_pair_stack(
+            t,
+            pair_mask,
+            tri_start_attn_mask=tri_start_attn_mask,
+            tri_end_attn_mask=tri_end_attn_mask,
+            templ_dim=templ_dim,
+            chunk_size=model.globals.chunk_size,
+            return_mean=not model.enable_template_pointwise_attention,
+        )
+
+        if model.enable_template_pointwise_attention:
+            t = model.template_pointwise_att(
+                t,
+                z,
+                template_mask=template_feats["template_mask"].to(dtype=z.dtype),
+                chunk_size=model.globals.chunk_size,
+            )
+            t_mask = torch.sum(template_feats["template_mask"], dim=-1, keepdims=True) > 0
+            t_mask = t_mask[..., None, None].type(t.dtype)
+            t *= t_mask
+        else:
+            t = model.template_proj(t, z)
+
+        t /= denom
+        out_t += t
+        del t
+
+    return out_t

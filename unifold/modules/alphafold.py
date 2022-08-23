@@ -28,6 +28,7 @@ from .template import (
     TemplatePairStack,
     TemplatePointwiseAttention,
     TemplateProjection,
+    embed_templates_average
 )
 from unicore.utils import (
     tensor_tree_map,
@@ -138,6 +139,16 @@ class AlphaFold(nn.Module):
     def embed_templates_pair(
         self, batch, z, pair_mask, tri_start_attn_mask, tri_end_attn_mask, templ_dim
     ):
+        if not self.training and self.config.template.template_pair_embedder.v2_feature:
+            return embed_templates_average(
+                    self,
+                    batch,
+                    z,
+                    pair_mask,
+                    tri_start_attn_mask,
+                    tri_end_attn_mask,
+                    templ_dim
+                )
         if self.config.template.template_pair_embedder.v2_feature:
             if "asym_id" in batch:
                 multichain_mask_2d = (
@@ -258,14 +269,14 @@ class AlphaFold(nn.Module):
             template_mask = feats["template_mask"]
             if torch.any(template_mask):
                 z = residual(
-                    z, 
+                    z,
                     self.embed_templates_pair(
                         feats,
                         z,
                         pair_mask,
                         tri_start_attn_mask,
                         tri_end_attn_mask,
-                        templ_dim=-4,
+                        templ_dim=1,
                     ),
                     self.training,
                 )
