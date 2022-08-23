@@ -338,6 +338,7 @@ class AlphaFold(nn.Module):
             )
             z += z0
             s += s0
+            del z0, s0
         if num_ensembles > 1:
             z /= float(num_ensembles)
             s /= float(num_ensembles)

@@ -300,10 +300,10 @@ class InvariantPointAttention(nn.Module):
         pt_att = permute_final_dims(pt_att, (2, 0, 1))
         attn += square_mask
         attn = softmax_dropout(attn, 0, self.training, bias=pt_att.type(attn.dtype))
-        del pt_att, q_pts, k_pts
+        del pt_att, q_pts, k_pts, bias
         o = torch.matmul(attn, v.transpose(-2, -3)).transpose(-2, -3)
         o = o.contiguous().view(*o.shape[:-2], -1)
-
+        del q, k, v
         o_pts = torch.sum(
             (
                 attn[..., None, :, :, None]
