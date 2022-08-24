@@ -133,19 +133,9 @@ class AlphaFold(nn.Module):
             if batch[key].dtype != self.dtype and "mask" in key:
                 batch[key] = batch[key].type(self.dtype)
         return batch
-
-    # TODO: reduce the memory cost in template pair
-    def embed_templates_pair(
-        self, batch, z, pair_mask, tri_start_attn_mask, tri_end_attn_mask, templ_dim
-    ):
+    
+    def embed_templates_pair_core(self, batch, z, pair_mask, tri_start_attn_mask, tri_end_attn_mask, templ_dim, multichain_mask_2d):
         if self.config.template.template_pair_embedder.v2_feature:
-            if "asym_id" in batch:
-                multichain_mask_2d = (
-                    batch["asym_id"][..., :, None] == batch["asym_id"][..., None, :]
-                )
-                multichain_mask_2d = multichain_mask_2d.unsqueeze(0)
-            else:
-                multichain_mask_2d = None
             t = build_template_pair_feat_v2(
                 batch,
                 inf=self.config.template.inf,
@@ -154,10 +144,10 @@ class AlphaFold(nn.Module):
                 **self.config.template.distogram,
             )
             num_template = t[0].shape[-4]
-            single_templates = (
+            single_templates = [
                 self.template_pair_embedder([x[..., ti, :, :, :] for x in t], z)
                 for ti in range(num_template)
-            )
+            ]
         else:
             t = build_template_pair_feat(
                 batch,
@@ -165,10 +155,10 @@ class AlphaFold(nn.Module):
                 eps=self.config.template.eps,
                 **self.config.template.distogram,
             )
-            single_templates = (
+            single_templates = [
                 self.template_pair_embedder(x, z)
                 for x in torch.unbind(t, dim=templ_dim)
-            )
+            ]
 
         t = self.template_pair_stack(
             single_templates,
@@ -179,20 +169,61 @@ class AlphaFold(nn.Module):
             chunk_size=self.globals.chunk_size,
             return_mean=not self.enable_template_pointwise_attention,
         )
-        if self.enable_template_pointwise_attention:
-
-            t = self.template_pointwise_att(
-                t,
-                z,
-                template_mask=batch["template_mask"],
-                chunk_size=self.globals.chunk_size,
+        return t
+    
+    def embed_templates_pair(
+        self, batch, z, pair_mask, tri_start_attn_mask, tri_end_attn_mask, templ_dim
+    ):
+        if self.config.template.template_pair_embedder.v2_feature and "asym_id" in batch:
+            multichain_mask_2d = (
+                batch["asym_id"][..., :, None] == batch["asym_id"][..., None, :]
             )
-            t_mask = torch.sum(batch["template_mask"], dim=-1, keepdims=True) > 0
-            t_mask = t_mask[..., None, None].type(t.dtype)
-            t *= t_mask
+            multichain_mask_2d = multichain_mask_2d.unsqueeze(0)
         else:
-            t = self.template_proj(t, z)
+            multichain_mask_2d = None
+        
+        if self.training or self.enable_template_pointwise_attention:
+            t = self.embed_templates_pair_core(batch, z, pair_mask, tri_start_attn_mask, tri_end_attn_mask, templ_dim, multichain_mask_2d)
+            if self.enable_template_pointwise_attention:
+                t = self.template_pointwise_att(
+                    t,
+                    z,
+                    template_mask=batch["template_mask"],
+                    chunk_size=self.globals.chunk_size,
+                )
+                t_mask = torch.sum(batch["template_mask"], dim=-1, keepdims=True) > 0
+                t_mask = t_mask[..., None, None].type(t.dtype)
+                t *= t_mask
+            else:
+                t = self.template_proj(t, z)
+        else:
+            template_aatype_shape = batch["template_aatype"].shape
+            # template_aatype is either [n_template, n_res] or [1, n_template_, n_res]
+            batch_templ_dim = 1 if len(template_aatype_shape) == 3 else 0
+            n_templ = batch["template_aatype"].shape[batch_templ_dim]
 
+            if n_templ <= 0:
+                t = None
+            else: 
+                template_batch = { k: v for k, v in batch.items() if k.startswith("template_") }
+                def embed_one_template(i):
+                    def slice_template_tensor(t):
+                        s = [slice(None) for _ in t.shape]
+                        s[batch_templ_dim] = slice(i, i + 1)
+                        return t[s]
+                    template_feats = tensor_tree_map(
+                        slice_template_tensor,
+                        template_batch,
+                    )
+                    t = self.embed_templates_pair_core(template_feats, z, pair_mask, tri_start_attn_mask, tri_end_attn_mask, templ_dim, multichain_mask_2d)
+                    return t
+
+                t = embed_one_template(0)
+                # iterate templates one by one
+                for i in range(1, n_templ):
+                    t += embed_one_template(i)
+                t /= n_templ
+            t = self.template_proj(t, z)
         return t
 
     def embed_templates_angle(self, batch):
@@ -258,7 +289,7 @@ class AlphaFold(nn.Module):
             template_mask = feats["template_mask"]
             if torch.any(template_mask):
                 z = residual(
-                    z, 
+                    z,
                     self.embed_templates_pair(
                         feats,
                         z,
@@ -327,6 +358,7 @@ class AlphaFold(nn.Module):
             )
             z += z0
             s += s0
+            del z0, s0
         if num_ensembles > 1:
             z /= float(num_ensembles)
             s /= float(num_ensembles)
