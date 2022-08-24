@@ -312,7 +312,6 @@ class TemplatePairStack(nn.Module):
             return s
         
         n_templ = len(single_templates)
-        conut = 0
         if n_templ > 0:
             new_single_templates = [one_template(0)]
             if return_mean:
