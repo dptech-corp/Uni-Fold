@@ -226,7 +226,6 @@ class AlphaFold(nn.Module):
             t = self.template_proj(t, z)
         return t
 
-
     def embed_templates_angle(self, batch):
         template_angle_feat, template_angle_mask = build_template_angle_feat(
             batch, v2_feature=self.config.template.template_pair_embedder.v2_feature
