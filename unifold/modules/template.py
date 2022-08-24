@@ -1,5 +1,6 @@
 from functools import partial
 from typing import Optional, List, Tuple
+import math
 
 import torch
 import torch.nn as nn
@@ -17,6 +18,7 @@ from .attentions import (
     TriangleAttentionStarting,
     TriangleAttentionEnding,
 )
+from .featurization import build_template_pair_feat_v2
 from .triangle_multiplication import (
     TriangleMultiplicationOutgoing,
     TriangleMultiplicationIncoming,
@@ -24,6 +26,7 @@ from .triangle_multiplication import (
 from unicore.utils import (
     checkpoint_sequential,
     permute_final_dims,
+    tensor_tree_map
 )
 from unicore.modules import LayerNorm
 
@@ -292,10 +295,7 @@ class TemplatePairStack(nn.Module):
         chunk_size: int,
         return_mean: bool,
     ):
-        new_single_templates = []
-        sum = 0.0
-        count = 0
-        for s in single_templates:
+        def one_template(i):
             (s,) = checkpoint_sequential(
                 functions=[
                     partial(
@@ -307,17 +307,25 @@ class TemplatePairStack(nn.Module):
                     )
                     for b in self.blocks
                 ],
-                input=(s,),
+                input=(single_templates[i],),
             )
+            return s
+        
+        n_templ = len(single_templates)
+        if n_templ > 0:
+            new_single_templates = [one_template(0)]
             if return_mean:
-                s = self.layer_norm(s)
-                sum = sum + s
-                count += 1
-            else:
-                new_single_templates.append(s)
+                t = self.layer_norm(new_single_templates[0])
+            for i in range(1, n_templ):
+                s = one_template(i)
+                if return_mean:
+                    t = residual(t, self.layer_norm(s), self.training)
+                else:
+                    new_single_templates.append(s)
+
         if return_mean:
-            if count > 0:
-                t = sum / count
+            if n_templ > 0:
+                t /= n_templ
             else:
                 t = None
         else:
