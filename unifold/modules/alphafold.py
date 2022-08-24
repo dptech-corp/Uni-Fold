@@ -222,7 +222,8 @@ class AlphaFold(nn.Module):
                 # iterate templates one by one
                 for i in range(1, n_templ):
                     t += embed_one_template(i)
-                t = self.template_proj(t / n_templ, z)
+                t /= n_templ
+            t = self.template_proj(t, z)
         return t
 
 
