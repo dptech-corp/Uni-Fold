@@ -123,8 +123,12 @@ class TriangleMultiplication(nn.Module):
             return self._chunk_2d(z, mask, chunk_size=chunk_size)
 
         g = nn.functional.linear(z, self.linear_g.weight)
-        ab = self.linear_ab_p(z) * mask
-        ab *= torch.sigmoid(self.linear_ab_g(z))
+        if self.training:
+            ab = self.linear_ab_p(z) * mask * torch.sigmoid(self.linear_ab_g(z))
+        else:
+            ab = self.linear_ab_p(z)
+            ab *= mask
+            ab *= torch.sigmoid(self.linear_ab_g(z))
         a, b = torch.chunk(ab, 2, dim=-1)
         del z, ab
 
