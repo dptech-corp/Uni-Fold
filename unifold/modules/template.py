@@ -295,10 +295,7 @@ class TemplatePairStack(nn.Module):
         chunk_size: int,
         return_mean: bool,
     ):
-        new_single_templates = []
-        sum = 0.0
-        count = 0
-        for s in single_templates:
+        def one_template(i):
             (s,) = checkpoint_sequential(
                 functions=[
                     partial(
@@ -310,17 +307,26 @@ class TemplatePairStack(nn.Module):
                     )
                     for b in self.blocks
                 ],
-                input=(s,),
+                input=(single_templates[i],),
             )
+            return s
+        
+        n_templ = len(single_templates)
+        conut = 0
+        if n_templ > 0:
+            new_single_templates = [one_template(0)]
             if return_mean:
-                s = self.layer_norm(s)
-                sum = sum + s
-                count += 1
-            else:
-                new_single_templates.append(s)
+                t = self.layer_norm(new_single_templates[0])
+            for i in range(1, n_templ):
+                s = one_template(i)
+                if return_mean:
+                    t = residual(t, self.layer_norm(s), self.training)
+                else:
+                    new_single_templates.append(s)
+
         if return_mean:
-            if count > 0:
-                t = sum / count
+            if n_templ > 0:
+                t /= n_templ
             else:
                 t = None
         else:
@@ -330,80 +336,3 @@ class TemplatePairStack(nn.Module):
             t = self.layer_norm(t)
 
         return t
-
-
-def embed_templates_average(
-    model,
-    batch,
-    z,
-    pair_mask,
-    tri_start_attn_mask,
-    tri_end_attn_mask,
-    templ_dim,
-    templ_group_size=1
-):
-    #embed the template one by one
-    n_templ = batch["template_aatype"].shape[templ_dim]
-    denom = math.ceil(n_templ / templ_group_size)
-    template_batch = {
-                        k: v for k, v in batch.items()
-                        if k.startswith("template_")
-                    }
-
-    if "asym_id" in batch:
-        multichain_mask_2d = (
-            batch["asym_id"][..., :, None] == batch["asym_id"][..., None, :]
-        )
-        multichain_mask_2d = multichain_mask_2d.unsqueeze(0)
-    else:
-        multichain_mask_2d = None
-
-    out_t = 0
-    for i in range(0, n_templ, templ_group_size):
-        def slice_template_tensor(t):
-            s = [slice(None) for _ in t.shape]
-            s[templ_dim] = slice(i, i + templ_group_size)
-            return t[s]
-
-        template_feats = tensor_tree_map(
-            slice_template_tensor,
-            template_batch,
-        )
-
-        t = build_template_pair_feat_v2(
-            template_feats,
-            inf=model.config.template.inf,
-            eps=model.config.template.eps,
-            multichain_mask_2d=multichain_mask_2d,
-            **model.config.template.distogram,
-        )
-
-        t = model.template_pair_embedder(t, z)
-        t = model.template_pair_stack(
-            t,
-            pair_mask,
-            tri_start_attn_mask=tri_start_attn_mask,
-            tri_end_attn_mask=tri_end_attn_mask,
-            templ_dim=templ_dim,
-            chunk_size=model.globals.chunk_size,
-            return_mean=not model.enable_template_pointwise_attention,
-        )
-
-        if model.enable_template_pointwise_attention:
-            t = model.template_pointwise_att(
-                t,
-                z,
-                template_mask=template_feats["template_mask"].to(dtype=z.dtype),
-                chunk_size=model.globals.chunk_size,
-            )
-            t_mask = torch.sum(template_feats["template_mask"], dim=-1, keepdims=True) > 0
-            t_mask = t_mask[..., None, None].type(t.dtype)
-            t *= t_mask
-        else:
-            t = model.template_proj(t, z)
-
-        t /= denom
-        out_t += t
-        del t
-
-    return out_t
