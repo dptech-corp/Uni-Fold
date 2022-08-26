@@ -106,14 +106,14 @@ class AlphaFold(nn.Module):
 
     def half(self):
         super().half()
-        if (not getattr(self, "inference_mode", False)):
+        if (not getattr(self, "inference", False)):
             self.__make_input_float__()
         self.dtype = torch.half
         return self
 
     def bfloat16(self):
         super().bfloat16()
-        if (not getattr(self, "inference_mode", False)):
+        if (not getattr(self, "inference", False)):
             self.__make_input_float__()
         self.dtype = torch.bfloat16
         return self
@@ -129,7 +129,7 @@ class AlphaFold(nn.Module):
 
     def inference_mode(self):
         def set_inference_mode(module):
-            setattr(module, "inference_mode", True)
+            setattr(module, "inference", True)
         self.apply(set_inference_mode)
 
     def __convert_input_dtype__(self, batch):
@@ -375,7 +375,7 @@ class AlphaFold(nn.Module):
         outputs["single"] = s
 
         # norm loss
-        if (not getattr(self, "inference_mode", False)) and num_recycling == (cycle_no + 1):
+        if (not getattr(self, "inference", False)) and num_recycling == (cycle_no + 1):
             delta_msa = m
             delta_msa[..., 0, :, :] = delta_msa[..., 0, :, :] - m_1_prev_emb.detach()
             delta_pair = z - z_prev_emb.detach()
@@ -396,7 +396,7 @@ class AlphaFold(nn.Module):
         outputs["pred_frame_tensor"] = outputs["sm"]["frames"][-1]
 
         # use float32 for numerical stability
-        if (not getattr(self, "inference_mode", False)):
+        if (not getattr(self, "inference", False)):
             m_1_prev = m[..., 0, :, :].float()
             z_prev = z.float()
             x_prev = outputs["final_atom_positions"].float()
