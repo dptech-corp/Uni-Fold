@@ -1,4 +1,4 @@
-FROM dptechnology/unicore:0.0.1-pytorch1.11.0-cuda11.3
+FROM dptechnology/unicore:latest-pytorch1.11.0-cuda11.3
 
 # metainformation
 LABEL org.opencontainers.image.version = "2.0.0"
