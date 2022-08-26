@@ -53,6 +53,7 @@ def load_feature_for_one_target(
         sequence_ids=sequence_ids,
         monomer_feature_dir=data_folder,
         uniprot_msa_dir=uniprot_msa_dir,
+        is_monomer=(not is_multimer),
     )
     batch = UnifoldDataset.collater([batch])
     return batch
