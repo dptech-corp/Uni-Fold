@@ -78,6 +78,7 @@ def main(args):
     model.load_state_dict(state_dict)
     model = model.to(args.model_device)
     model.eval()
+    model.inference_mode()
     if args.bf16:
         model.bfloat16()
 
