@@ -262,9 +262,8 @@ def tri_mul_residual(
     dropout_shared_dim,
     prob,
     training,
-    chunk_size=None,
 ):
-    if training or chunk_size is None:
+    if training:
         x, g = outputs
         bias, g_bias = module.get_output_bias()
         shape = list(x.shape)

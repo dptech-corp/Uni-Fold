@@ -172,6 +172,7 @@ class AlphaFold(nn.Module):
             tri_end_attn_mask=tri_end_attn_mask,
             templ_dim=templ_dim,
             chunk_size=self.globals.chunk_size,
+            block_size=self.globals.block_size,
             return_mean=not self.enable_template_pointwise_attention,
         )
         return t
@@ -318,6 +319,7 @@ class AlphaFold(nn.Module):
                 z,
                 msa_mask=feats["extra_msa_mask"],
                 chunk_size=self.globals.chunk_size,
+                block_size=self.globals.block_size,
                 pair_mask=pair_mask,
                 msa_row_attn_mask=extra_msa_row_mask,
                 msa_col_attn_mask=None,
@@ -345,6 +347,7 @@ class AlphaFold(nn.Module):
             tri_start_attn_mask=tri_start_attn_mask,
             tri_end_attn_mask=tri_end_attn_mask,
             chunk_size=self.globals.chunk_size,
+            block_size=self.globals.block_size,
         )
         return m, z, s, msa_mask, m_1_prev_emb, z_prev_emb
 

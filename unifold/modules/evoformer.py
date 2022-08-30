@@ -124,6 +124,7 @@ class EvoformerIteration(nn.Module):
         tri_start_attn_mask: torch.Tensor,
         tri_end_attn_mask: torch.Tensor,
         chunk_size: Optional[int] = None,
+        block_size: Optional[int] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
 
         if self.outer_product_mean_first:
@@ -169,21 +170,19 @@ class EvoformerIteration(nn.Module):
         z = tri_mul_residual(
             self.tri_mul_out,
             z,
-            self.tri_mul_out(z, mask=pair_mask, chunk_size=chunk_size),
+            self.tri_mul_out(z, mask=pair_mask, block_size=block_size),
             self.row_dropout_share_dim,
             self.pair_dropout,
             self.training,
-            chunk_size=chunk_size,
         )
 
         z = tri_mul_residual(
             self.tri_mul_in,
             z,
-            self.tri_mul_in(z, mask=pair_mask, chunk_size=chunk_size),
+            self.tri_mul_in(z, mask=pair_mask, block_size=block_size),
             self.row_dropout_share_dim,
             self.pair_dropout,
             self.training,
-            chunk_size=chunk_size,
         )
 
         z = bias_dropout_residual(
@@ -274,6 +273,7 @@ class EvoformerStack(nn.Module):
         tri_start_attn_mask: torch.Tensor,
         tri_end_attn_mask: torch.Tensor,
         chunk_size: int,
+        block_size: int,
     ) -> Tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]:
         blocks = [
             partial(
@@ -285,6 +285,7 @@ class EvoformerStack(nn.Module):
                 tri_start_attn_mask=tri_start_attn_mask,
                 tri_end_attn_mask=tri_end_attn_mask,
                 chunk_size=chunk_size,
+                block_size=block_size
             )
             for b in self.blocks
         ]
@@ -355,6 +356,7 @@ class ExtraMSAStack(EvoformerStack):
         tri_start_attn_mask: torch.Tensor = None,
         tri_end_attn_mask: torch.Tensor = None,
         chunk_size: int = None,
+        block_size: int = None,
     ) -> torch.Tensor:
         _, z, _ = super().forward(
             m,
@@ -366,5 +368,6 @@ class ExtraMSAStack(EvoformerStack):
             tri_start_attn_mask=tri_start_attn_mask,
             tri_end_attn_mask=tri_end_attn_mask,
             chunk_size=chunk_size,
+            block_size=block_size
         )
         return z

@@ -30,6 +30,12 @@ def automatic_chunk_size(seq_len):
         chunk_size = 1
     return chunk_size
 
+def automatic_block_size(seq_len):
+    if seq_len < 2048:
+        block_size = None
+    else:
+        block_size = 256
+    return block_size
 
 def load_feature_for_one_target(
     config, data_folder, seed=0, is_multimer=False, use_uniprot=False
@@ -111,6 +117,7 @@ def main(args):
         )
         seq_len = batch["aatype"].shape[-1]
         model.globals.chunk_size = automatic_chunk_size(seq_len)
+        model.globals.block_size = automatic_block_size(seq_len)
 
         with torch.no_grad():
             batch = {
