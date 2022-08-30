@@ -174,6 +174,7 @@ class EvoformerIteration(nn.Module):
             self.row_dropout_share_dim,
             self.pair_dropout,
             self.training,
+            block_size=block_size,
         )
 
         z = tri_mul_residual(
@@ -183,6 +184,7 @@ class EvoformerIteration(nn.Module):
             self.row_dropout_share_dim,
             self.pair_dropout,
             self.training,
+            block_size=block_size,
         )
 
         z = bias_dropout_residual(

@@ -190,6 +190,7 @@ class TemplatePairStackBlock(nn.Module):
                 self.row_dropout_share_dim,
                 self.dropout,
                 self.training,
+                block_size=block_size,
             )
 
             s = tri_mul_residual(
@@ -199,6 +200,7 @@ class TemplatePairStackBlock(nn.Module):
                 self.row_dropout_share_dim,
                 self.dropout,
                 self.training,
+                block_size=block_size,
             )
         else:
             s = tri_mul_residual(
@@ -208,6 +210,7 @@ class TemplatePairStackBlock(nn.Module):
                 self.row_dropout_share_dim,
                 self.dropout,
                 self.training,
+                block_size=block_size,
             )
 
             s = tri_mul_residual(
@@ -217,6 +220,7 @@ class TemplatePairStackBlock(nn.Module):
                 self.row_dropout_share_dim,
                 self.dropout,
                 self.training,
+                block_size=block_size,
             )
 
             s = bias_dropout_residual(

@@ -74,8 +74,6 @@ def main(args):
     if args.sample_templates:
         # enable template samples for diversity
         config.data.predict.subsample_templates = True
-    # faster prediction with large chunk
-    config.globals.chunk_size = 128
     model = AlphaFold(config)
 
     print("start to load params {}".format(args.param_path))
@@ -116,6 +114,7 @@ def main(args):
             use_uniprot=args.use_uniprot,
         )
         seq_len = batch["aatype"].shape[-1]
+        # faster prediction with large chunk/block size
         model.globals.chunk_size = automatic_chunk_size(seq_len)
         model.globals.block_size = automatic_block_size(seq_len)
 
