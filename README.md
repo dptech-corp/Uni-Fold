@@ -11,10 +11,10 @@ We proudly present Uni-Fold as a thoroughly open-source platform for developing 
 - Easy distributed training based on [Uni-Core](https://github.com/dptech-corp/Uni-Core/), as well as other conveniences including half-precision training (`float16/bfloat16`), per-sample gradient clipping, and fused CUDA kernels.
 
 
-![case](./img/7t6u.png)
+![case](./img/case.png)
 <center>
 <small>
-Figure 1. Uni-Fold successfully predicted the interaction between the nanobody and the GPCR-G protein complex, while AlphaFold-Multimer failed.
+Figure 1. Uni-Fold has equivalent or better performances compared with AlphaFold.
 </small>
 </center>
 
