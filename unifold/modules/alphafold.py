@@ -106,14 +106,14 @@ class AlphaFold(nn.Module):
 
     def half(self):
         super().half()
-        if self.training:
+        if (not getattr(self, "inference", False)):
             self.__make_input_float__()
         self.dtype = torch.half
         return self
 
     def bfloat16(self):
         super().bfloat16()
-        if self.training:
+        if (not getattr(self, "inference", False)):
             self.__make_input_float__()
         self.dtype = torch.bfloat16
         return self
@@ -127,13 +127,18 @@ class AlphaFold(nn.Module):
 
         self.apply(set_alphafold_original_mode)
 
+    def inference_mode(self):
+        def set_inference_mode(module):
+            setattr(module, "inference", True)
+        self.apply(set_inference_mode)
+
     def __convert_input_dtype__(self, batch):
         for key in batch:
             # only convert features with mask
             if batch[key].dtype != self.dtype and "mask" in key:
                 batch[key] = batch[key].type(self.dtype)
         return batch
-    
+
     def embed_templates_pair_core(self, batch, z, pair_mask, tri_start_attn_mask, tri_end_attn_mask, templ_dim, multichain_mask_2d):
         if self.config.template.template_pair_embedder.v2_feature:
             t = build_template_pair_feat_v2(
@@ -170,7 +175,7 @@ class AlphaFold(nn.Module):
             return_mean=not self.enable_template_pointwise_attention,
         )
         return t
-    
+
     def embed_templates_pair(
         self, batch, z, pair_mask, tri_start_attn_mask, tri_end_attn_mask, templ_dim
     ):
@@ -181,7 +186,7 @@ class AlphaFold(nn.Module):
             multichain_mask_2d = multichain_mask_2d.unsqueeze(0)
         else:
             multichain_mask_2d = None
-        
+
         if self.training or self.enable_template_pointwise_attention:
             t = self.embed_templates_pair_core(batch, z, pair_mask, tri_start_attn_mask, tri_end_attn_mask, templ_dim, multichain_mask_2d)
             if self.enable_template_pointwise_attention:
@@ -204,7 +209,7 @@ class AlphaFold(nn.Module):
 
             if n_templ <= 0:
                 t = None
-            else: 
+            else:
                 template_batch = { k: v for k, v in batch.items() if k.startswith("template_") }
                 def embed_one_template(i):
                     def slice_template_tensor(t):
@@ -370,7 +375,7 @@ class AlphaFold(nn.Module):
         outputs["single"] = s
 
         # norm loss
-        if self.training and num_recycling == (cycle_no + 1):
+        if (not getattr(self, "inference", False)) and num_recycling == (cycle_no + 1):
             delta_msa = m
             delta_msa[..., 0, :, :] = delta_msa[..., 0, :, :] - m_1_prev_emb.detach()
             delta_pair = z - z_prev_emb.detach()
@@ -391,7 +396,7 @@ class AlphaFold(nn.Module):
         outputs["pred_frame_tensor"] = outputs["sm"]["frames"][-1]
 
         # use float32 for numerical stability
-        if self.training:
+        if (not getattr(self, "inference", False)):
             m_1_prev = m[..., 0, :, :].float()
             z_prev = z.float()
             x_prev = outputs["final_atom_positions"].float()
