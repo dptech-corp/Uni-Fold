@@ -161,6 +161,7 @@ class TemplatePairStackBlock(nn.Module):
         tri_start_attn_mask: torch.Tensor,
         tri_end_attn_mask: torch.Tensor,
         chunk_size: Optional[int] = None,
+        block_size: Optional[int] = None,
     ):
         if self.tri_attn_first:
             s = bias_dropout_residual(
@@ -185,41 +186,41 @@ class TemplatePairStackBlock(nn.Module):
             s = tri_mul_residual(
                 self.tri_mul_out,
                 s,
-                self.tri_mul_out(s, mask=mask, chunk_size=chunk_size),
+                self.tri_mul_out(s, mask=mask, block_size=block_size),
                 self.row_dropout_share_dim,
                 self.dropout,
                 self.training,
-                chunk_size=chunk_size
+                block_size=block_size,
             )
 
             s = tri_mul_residual(
                 self.tri_mul_in,
                 s,
-                self.tri_mul_in(s, mask=mask, chunk_size=chunk_size),
+                self.tri_mul_in(s, mask=mask, block_size=block_size),
                 self.row_dropout_share_dim,
                 self.dropout,
                 self.training,
-                chunk_size=chunk_size
+                block_size=block_size,
             )
         else:
             s = tri_mul_residual(
                 self.tri_mul_out,
                 s,
-                self.tri_mul_out(s, mask=mask, chunk_size=chunk_size),
+                self.tri_mul_out(s, mask=mask, block_size=block_size),
                 self.row_dropout_share_dim,
                 self.dropout,
                 self.training,
-                chunk_size=chunk_size
+                block_size=block_size,
             )
 
             s = tri_mul_residual(
                 self.tri_mul_in,
                 s,
-                self.tri_mul_in(s, mask=mask, chunk_size=chunk_size),
+                self.tri_mul_in(s, mask=mask, block_size=block_size),
                 self.row_dropout_share_dim,
                 self.dropout,
                 self.training,
-                chunk_size=chunk_size
+                block_size=block_size,
             )
 
             s = bias_dropout_residual(
@@ -293,6 +294,7 @@ class TemplatePairStack(nn.Module):
         tri_end_attn_mask: torch.Tensor,
         templ_dim: int,
         chunk_size: int,
+        block_size: int,
         return_mean: bool,
     ):
         def one_template(i):
@@ -304,13 +306,14 @@ class TemplatePairStack(nn.Module):
                         tri_start_attn_mask=tri_start_attn_mask,
                         tri_end_attn_mask=tri_end_attn_mask,
                         chunk_size=chunk_size,
+                        block_size=block_size,
                     )
                     for b in self.blocks
                 ],
                 input=(single_templates[i],),
             )
             return s
-        
+
         n_templ = len(single_templates)
         if n_templ > 0:
             new_single_templates = [one_template(0)]
