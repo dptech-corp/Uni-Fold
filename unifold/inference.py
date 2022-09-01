@@ -1,6 +1,7 @@
 import argparse
 import gzip
 import logging
+import math
 import numpy as np
 import os
 
@@ -16,20 +17,34 @@ from unicore.utils import (
     tensor_tree_map,
 )
 
-
-def automatic_chunk_size(seq_len):
-    if seq_len < 512:
-        chunk_size = 256
-    elif seq_len < 1024:
-        chunk_size = 128
-    elif seq_len < 2048:
-        chunk_size = 32
-    elif seq_len < 3072:
-        chunk_size = 16
+def get_device_mem(device):
+    if device != "cpu" and torch.cuda.is_available():
+        cur_device = torch.cuda.current_device()
+        prop = torch.cuda.get_device_properties("cuda:{}".format(cur_device))
+        total_memory_in_GB = prop.total_memory / 1024 / 1024 / 1024
+        return total_memory_in_GB
     else:
-        chunk_size = 1
-    return chunk_size
+        return 40
 
+def automatic_chunk_size(seq_len, device, is_bf16):
+    total_mem_in_GB = get_device_mem(device)
+    factor = math.sqrt(total_mem_in_GB/40.0*(0.55 * is_bf16 + 0.45))*0.95
+    if seq_len < int(1024*factor):
+        chunk_size = 256
+        block_size = None
+    elif seq_len < int(2048*factor):
+        chunk_size = 128
+        block_size = None
+    elif seq_len < int(3072*factor):
+        chunk_size = 64
+        block_size = None
+    elif seq_len < int(4096*factor):
+        chunk_size = 32
+        block_size = 512
+    else:
+        chunk_size = 4
+        block_size = 256
+    return chunk_size, block_size
 
 def load_feature_for_one_target(
     config, data_folder, seed=0, is_multimer=False, use_uniprot=False
@@ -68,8 +83,6 @@ def main(args):
     if args.sample_templates:
         # enable template samples for diversity
         config.data.predict.subsample_templates = True
-    # faster prediction with large chunk
-    config.globals.chunk_size = 128
     model = AlphaFold(config)
 
     print("start to load params {}".format(args.param_path))
@@ -110,7 +123,14 @@ def main(args):
             use_uniprot=args.use_uniprot,
         )
         seq_len = batch["aatype"].shape[-1]
-        model.globals.chunk_size = automatic_chunk_size(seq_len)
+        # faster prediction with large chunk/block size
+        chunk_size, block_size = automatic_chunk_size(
+                                    seq_len,
+                                    args.model_device,
+                                    args.bf16
+                                )
+        model.globals.chunk_size = chunk_size
+        model.globals.block_size = block_size
 
         with torch.no_grad():
             batch = {
