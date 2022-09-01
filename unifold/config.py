@@ -227,6 +227,7 @@ def base_config():
             },
             "globals": {
                 "chunk_size": chunk_size,
+                "block_size": None,
                 "d_pair": d_pair,
                 "d_msa": d_msa,
                 "d_template": d_template,
