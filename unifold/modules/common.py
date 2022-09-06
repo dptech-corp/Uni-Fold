@@ -262,9 +262,9 @@ def tri_mul_residual(
     dropout_shared_dim,
     prob,
     training,
-    chunk_size=None,
+    block_size,
 ):
-    if training or chunk_size is None:
+    if training:
         x, g = outputs
         bias, g_bias = module.get_output_bias()
         shape = list(x.shape)
@@ -280,6 +280,11 @@ def tri_mul_residual(
             mask,
             prob,
         )
+    elif block_size is None:
+        x, g = outputs
+        bias, g_bias = module.get_output_bias()
+        residual += (torch.sigmoid(g + g_bias) * (x + bias))
+        return residual
     else:
         # gated is not used here
         residual += outputs
