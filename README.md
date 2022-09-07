@@ -2,6 +2,7 @@
 
 [[bioRxiv](https://www.biorxiv.org/content/10.1101/2022.08.04.502811v2)], [[Uni-Fold Colab](https://colab.research.google.com/github/dptech-corp/Uni-Fold/blob/main/notebooks/unifold.ipynb)], [[Hermite™](https://hermite.dp.tech/)]
 
+[[UF-Symmetry bioRxiv](https://www.biorxiv.org/content/10.1101/2022.08.30.505833)]
 
 We proudly present Uni-Fold as a thoroughly open-source platform for developing protein models beyond [AlphaFold](https://github.com/deepmind/alphafold/). Uni-Fold introduces the following features:
 
@@ -9,6 +10,7 @@ We proudly present Uni-Fold as a thoroughly open-source platform for developing 
 - Model correctness proved by successful from-scratch training with equivalent accuracy, both monomer and multimer included.
 - Highest efficiency among existing AlphaFold implementations (to our knowledge).
 - Easy distributed training based on [Uni-Core](https://github.com/dptech-corp/Uni-Core/), as well as other conveniences including half-precision training (`float16/bfloat16`), per-sample gradient clipping, and fused CUDA kernels.
+- Fast prediction of large symmetric complexes with UF-Symmetry.
 
 
 ![case](./img/case.png)
@@ -43,6 +45,19 @@ Figure 3. Uni-Fold is to our knowledge the fastest implemetation of AlphaFold.
 The name Uni-Fold is inherited from our previous repository, [Uni-Fold-JAX](https://github.com/dptech-corp/Uni-Fold-jax). First released on Dec 8 2021, Uni-Fold-JAX was the first open-source project (with training scripts) that successfully reproduced the from-scratch training of AlphaFold. Until recently, Uni-Fold-JAX is still the only project that supports training of the original AlphaFold implementation in JAX framework. Due to efficiency and collaboration considerations, we moved from JAX to PyTorch on Jan 2022, based on which we further developed the multimer models.
 
 ---
+
+## NEWEST in Uni-Fold
+
+[2022-09-06] We released the code of Uni-Fold Symmetry (UF-Symmetry), a fast solution to fold large symmetric protein complexes. The details of UF-Symmetry can be found in [bioRxiv: Uni-Fold Symmetry: Harnessing Symmetry in Folding Large Protein Complexes](https://www.biorxiv.org/content/10.1101/2022.08.30.505833). The code of UF-Symmetry is concentrated in the folder [`unifold/symmetry`](./unifold/symmetry/).
+
+![case](./img/uf-symmetry-effect.png)
+<center>
+<small>
+Figure 4. Prediction of UF-Symmetry. AlphaFold etc. failed due to OOM errors.
+</small>
+</center>
+
+&nbsp;
 
 ## Installation and Preparations
 
@@ -175,6 +190,29 @@ Besides the notices in the previous section, additionaly note that:
 1. The model architecture should be correctly specified by the model name.
 2. Checkpoints must be in Uni-Fold format (`*.pt`).
 
+## Run UF-Symmetry
+
+To run UF-Symmetry, please first install the newest version of Uni-Fold, and download the parameters of UF-Symmetry:
+
+```bash
+wget https://uni-fold.dp.tech/uf_symmetry_params_2022-09-06.tar.gz
+tar -zxf uf_symmetry_params_2022-09-06.tar.gz
+```
+
+Run
+
+```bash
+bash run_uf_symmetry.sh \
+    /path/to/the/input.fasta \        # target fasta file, include AU only
+    C3 \                              # desired symmetry group
+    /path/to/the/output/directory/ \  # output directory
+    /path/to/database/directory/ \    # directory of databases
+    2020-05-01 \                      # use templates before this date
+    /path/to/model_parameters.pt      # model parameters
+```
+
+to inference with UF-Symmetry. **Note that the input FASTA file should contain the sequences of the asymmetric unit only, and a symmetry group must be specified for the model.**
+
 ## Inference on Hermite
 
 We provide covenient structure prediction service on [Hermite™](https://hermite.dp.tech/), a new-generation drug design platform powered by AI, physics, and computing. Users only need to upload sequences of protein monomers and multimers to obtain the predicted structures from Uni-Fold, acompanied by various analyzing tools. [Click here](https://docs.google.com/document/d/1iFdezkKJVuhyqN3WvzsC7-422T-zf18IhP7M9CBj5gs) for more information of how to use Hermite™.
@@ -195,6 +233,20 @@ If you use the code, the model parameters, the web server at [Hermite™](https:
 	doi = {10.1101/2022.08.04.502811},
 	URL = {https://www.biorxiv.org/content/10.1101/2022.08.04.502811v2},
 	eprint = {https://www.biorxiv.org/content/10.1101/2022.08.04.502811v2.full.pdf},
+	journal = {bioRxiv}
+}
+```
+
+If you use the relative utilities of UF-Symmetry, please cite
+
+```bibtex
+@article {uf-symmetry,
+	author = {Li, Ziyao and Yang, Shuwen and Liu, Xuyang and Chen, Weijie and Wen, Han and Shen, Fan and Ke, Guolin and Zhang, Linfeng},
+	title = {Uni-Fold Symmetry: Harnessing Symmetry in Folding Large Protein Complexes},
+	year = {2022},
+	doi = {10.1101/2022.08.30.505833},
+	URL = {https://www.biorxiv.org/content/early/2022/08/30/2022.08.30.505833},
+	eprint = {https://www.biorxiv.org/content/early/2022/08/30/2022.08.30.505833.full.pdf},
 	journal = {bioRxiv}
 }
 ```
