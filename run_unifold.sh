@@ -14,15 +14,15 @@ python unifold/homo_search.py \
     --mgnify_database_path=$database_dir/mgnify/mgy_clusters_2018_12.fa \
     --bfd_database_path=$database_dir/bfd/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt \
     --uniclust30_database_path=$database_dir/uniclust30/uniclust30_2018_08/uniclust30_2018_08 \
-    --uniprot_database_path=$database_dir/uniprot_db/uniprot_220501/uniprot_trembl.fasta \
+    --uniprot_database_path=$database_dir/uniprot/uniprot.fasta \
     --pdb_seqres_database_path=$database_dir/pdb_seqres/pdb_seqres.txt \
     --template_mmcif_dir=$database_dir/pdb_mmcif/mmcif_files \
     --obsolete_pdbs_path=$database_dir/pdb_mmcif/obsolete.dat \
     --use_precomputed_msas=True
 
 echo "Starting prediction..."
-fasta_dir=$(dirname $fasta_path)
-target_name=${fasta_dir##*/}
+fasta_file=$(basename $fasta_path)
+target_name=${fasta_file%.fa*}
 python unifold/inference.py \
 	--model_name=$model_name \
 	--param_path=$param_path \
