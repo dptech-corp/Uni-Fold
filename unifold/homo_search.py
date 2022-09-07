@@ -17,6 +17,7 @@
 import json
 import os
 import pickle
+from pathlib import Path
 import shutil
 import time
 import gzip
@@ -261,7 +262,7 @@ def main(argv):
     )
 
     fasta_path = FLAGS.fasta_path
-    fasta_name = FLAGS.fasta_path.split("/")[-2]
+    fasta_name = Path(fasta_path).stem
     input_fasta_str = open(fasta_path).read()
     input_seqs, input_descs = parsers.parse_fasta(input_fasta_str)
     if len(input_seqs) > 1:
