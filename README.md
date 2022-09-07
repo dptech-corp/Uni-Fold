@@ -50,7 +50,7 @@ The name Uni-Fold is inherited from our previous repository, [Uni-Fold-JAX](http
 
 [2022-09-06] We released the code of Uni-Fold Symmetry (UF-Symmetry), a fast solution to fold large symmetric protein complexes. The details of UF-Symmetry can be found in [bioRxiv: Uni-Fold Symmetry: Harnessing Symmetry in Folding Large Protein Complexes](https://www.biorxiv.org/content/10.1101/2022.08.30.505833). The code of UF-Symmetry is concentrated in the folder [`unifold/symmetry`](./unifold/symmetry/).
 
-![case](./img/uf-symmetry-effect.png)
+![case](./img/uf-symmetry-effect.gif)
 <center>
 <small>
 Figure 4. Prediction of UF-Symmetry. AlphaFold etc. failed due to OOM errors.
