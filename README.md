@@ -85,7 +85,7 @@ pip install -e .
 Training and inference with Uni-Fold require homology searches on sequence and structure databases. Use the following command to download these databases:
 
 ```bash
-  bash scripts/download_all_data.sh /path/to/database/directory
+  bash scripts/download/download_all_data.sh /path/to/database/directory
 ```
 
 Make sure there is at least 3TB storage space for downloading (~500GB) and uncompressing the databases.
