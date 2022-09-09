@@ -1,6 +1,6 @@
 # Uni-Fold: an open-source platform for developing protein models beyond AlphaFold.
 
-[[bioRxiv](https://www.biorxiv.org/content/10.1101/2022.08.04.502811v2)], [[Uni-Fold Colab](https://colab.research.google.com/github/dptech-corp/Uni-Fold/blob/main/notebooks/unifold.ipynb)], [[Hermite™](https://hermite.dp.tech/)]
+[[bioRxiv](https://doi.org/10.1101/2022.08.04.502811)], [[Uni-Fold Colab](https://colab.research.google.com/github/dptech-corp/Uni-Fold/blob/main/notebooks/unifold.ipynb)], [[Hermite™](https://hermite.dp.tech/)]
 
 [[UF-Symmetry bioRxiv](https://www.biorxiv.org/content/10.1101/2022.08.30.505833)]
 
@@ -22,7 +22,7 @@ Figure 1. Uni-Fold has equivalent or better performances compared with AlphaFold
 
 &nbsp;
 
-We evaluated Uni-Fold on PDB structures release after our training set with less than 40% template identity. The structures for evaluations are included in [`evaluation`](./evaluation). Uni-Fold enjoys similar monomer prediction accuracy and better multimer prediction accuracy compared with AlphaFold(-Multimer). We also benchmarked the efficiency of Uni-Fold. The end-to-end training efficiency is about 2.2 times of the official AlphaFold. More evaluation results and details are included in our [bioRxiv preprint](https://www.biorxiv.org/content/10.1101/2022.08.04.502811v2).
+We evaluated Uni-Fold on PDB structures release after our training set with less than 40% template identity. The structures for evaluations are included in [`evaluation`](./evaluation). Uni-Fold enjoys similar monomer prediction accuracy and better multimer prediction accuracy compared with AlphaFold(-Multimer). We also benchmarked the efficiency of Uni-Fold. The end-to-end training efficiency is about 2.2 times of the official AlphaFold. More evaluation results and details are included in our [bioRxiv preprint](https://doi.org/10.1101/2022.08.04.502811).
 
 ![case](./img/accuracy.png)
 <center>
@@ -48,7 +48,7 @@ The name Uni-Fold is inherited from our previous repository, [Uni-Fold-JAX](http
 
 ## NEWEST in Uni-Fold
 
-[2022-09-06] We released the code of Uni-Fold Symmetry (UF-Symmetry), a fast solution to fold large symmetric protein complexes. The details of UF-Symmetry can be found in [bioRxiv: Uni-Fold Symmetry: Harnessing Symmetry in Folding Large Protein Complexes](https://www.biorxiv.org/content/10.1101/2022.08.30.505833). The code of UF-Symmetry is concentrated in the folder [`unifold/symmetry`](./unifold/symmetry/).
+[2022-09-06] We released the code of Uni-Fold Symmetry (UF-Symmetry), a fast solution to fold large symmetric protein complexes. The details of UF-Symmetry can be found in [bioRxiv: Uni-Fold Symmetry: Harnessing Symmetry in Folding Large Protein Complexes](https://doi.org/10.1101/2022.08.30.505833). The code of UF-Symmetry is concentrated in the folder [`unifold/symmetry`](./unifold/symmetry/).
 
 ![case](./img/uf-symmetry-effect.gif)
 <center>
@@ -231,8 +231,8 @@ If you use the code, the model parameters, the web server at [Hermite™](https:
 	title = {Uni-Fold: An Open-Source Platform for Developing Protein Folding Models beyond AlphaFold},
 	year = {2022},
 	doi = {10.1101/2022.08.04.502811},
-	URL = {https://www.biorxiv.org/content/10.1101/2022.08.04.502811v2},
-	eprint = {https://www.biorxiv.org/content/10.1101/2022.08.04.502811v2.full.pdf},
+	URL = {https://www.biorxiv.org/content/10.1101/2022.08.04.502811v3},
+	eprint = {https://www.biorxiv.org/content/10.1101/2022.08.04.502811v3.full.pdf},
 	journal = {bioRxiv}
 }
 ```
