@@ -272,6 +272,12 @@ def main(argv):
         fasta_names = temp_names
         fasta_paths = temp_paths
     else:
+        output_dir = os.path.join(FLAGS.output_dir, fasta_name)
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        chain_order_path = os.path.join(output_dir, "chains.txt")
+        with open(chain_order_path, "w") as f:
+            f.write("A")
         fasta_names = [fasta_name]
         fasta_paths = [fasta_path]
 
