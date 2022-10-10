@@ -124,7 +124,7 @@ bash run_unifold.sh \
     /path/to/the/output/directory/ \  # output directory
     /path/to/database/directory/ \    # directory of databases
     2020-05-01 \                      # use templates before this date
-    model_name \                      # specify model name, must be consistent with model parameters
+    $model_name \                     # specify model name, must be consistent with model parameters
     /path/to/model_parameters.pt      # model parameters
 ```
 
@@ -163,14 +163,14 @@ Run the following command to train Uni-Fold Monomer/Multimer from-scratch:
 bash train_monomer.sh \                 # train_multimer.sh for multimer
     /path/to/training/data/directory/ \ # dataset directory
     /path/to/output/directory/ \        # output directory where parameters are stored
-    model_2_af2                         # model name
+    model_2                             # model name
 ```
 
 Note that:
 
 1. The dataset directory should be configurated in a similar way as the [example data](example_data).
 2. The output directory should have enough space to store model parameters (~1.5GB per checkpoint, so empirically 60GB satisfies the default configuration in the shell script).
-3. We provide several default model names in [config.py](unifold/config.py), namely `model_1`, `model_2`, `model_2_af2` etc. for monomer models and `multimer`, `multimer_af2` etc. for multimer models. Check `model_config()` function for the differences between model names. You may also personalize your own model by modifying the function (i.e. forking the if-elses).
+3. We provide several default model names in [config.py](unifold/config.py), namely `model_1`, `model_2`, `model_2_ft` etc. for monomer models and `multimer`, `multimer_ft` etc. for multimer models. Check `model_config()` function for the differences between model names. You may also personalize your own model by modifying the function (i.e. forking the if-elses).
 
 
 ### Finetuning
@@ -182,7 +182,7 @@ bash finetune_monomer.sh \              # finetune_multimer.sh for multimer
     /path/to/training/data/directory/ \ # dataset directory
     /path/to/output/directory/ \        # output directory where parameters are stored
     /path/to/pretrained/parameters.pt \ # pretrained parameters
-    model_2_af2                         # model name
+    model_2_ft                          # model name
 ```
 
 Besides the notices in the previous section, additionaly note that:
