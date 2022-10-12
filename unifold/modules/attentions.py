@@ -11,6 +11,8 @@ from unicore.modules import (
     LayerNorm,
 )
 
+from .flash_attention import _flash_attn
+
 
 def gen_attn_mask(mask, neg_inf):
     assert neg_inf < -1e4
@@ -32,6 +34,7 @@ class Attention(nn.Module):
         super(Attention, self).__init__()
 
         self.num_heads = num_heads
+        self.head_dim = head_dim
         total_dim = head_dim * self.num_heads
         self.gating = gating
         self.linear_q = Linear(q_dim, total_dim, bias=False, init="glorot")
@@ -51,29 +54,45 @@ class Attention(nn.Module):
         v: torch.Tensor,
         mask: torch.Tensor = None,
         bias: Optional[torch.Tensor] = None,
+        use_flash: bool = False,
+        q_cu_seqlens: torch.Tensor = None,
+        k_cu_seqlens: torch.Tensor = None,
     ) -> torch.Tensor:
         g = None
         if self.linear_g is not None:
             # gating, use raw query input
             g = self.linear_g(q)
 
+        # [bs, seq, n, c] -> [bs, seq, n, no_heads * c] -> [bs, seq, n, no_heads, c]
         q = self.linear_q(q)
         q *= self.norm
         k = self.linear_k(k)
         v = self.linear_v(v)
 
-        q = q.view(q.shape[:-1] + (self.num_heads, -1)).transpose(-2, -3).contiguous()
-        k = k.view(k.shape[:-1] + (self.num_heads, -1)).transpose(-2, -3).contiguous()
-        v = v.view(v.shape[:-1] + (self.num_heads, -1)).transpose(-2, -3)
+        if self.head_dim in (16, 32, 64, 128) and use_flash \
+            and q.shape == k.shape :
+            # fix: this is avoid model.template_pointwise_att.mha mask shape
+            q = q.view(q.shape[:-1] + (self.num_heads, -1))
+            k = k.view(k.shape[:-1] + (self.num_heads, -1))
+            v = v.view(v.shape[:-1] + (self.num_heads, -1))
+            # [bs, seq, n, no_heads, c]
+            o = _flash_attn(q, k, v, mask=mask, bias=bias, 
+                q_cu_seqlens=q_cu_seqlens, k_cu_seqlens=k_cu_seqlens)
 
-        attn = torch.matmul(q, k.transpose(-1, -2))
-        del q, k
+        else:
+            q = q.view(q.shape[:-1] + (self.num_heads, -1)).transpose(-2, -3).contiguous()
+            k = k.view(k.shape[:-1] + (self.num_heads, -1)).transpose(-2, -3).contiguous()
+            v = v.view(v.shape[:-1] + (self.num_heads, -1)).transpose(-2, -3)
 
-        attn = softmax_dropout(attn, 0, self.training, mask=mask, bias=bias)
-        o = torch.matmul(attn, v)
-        del attn, v
+            attn = torch.matmul(q, k.transpose(-1, -2))
+            del q, k
 
-        o = o.transpose(-2, -3).contiguous()
+            attn = softmax_dropout(attn, 0, self.training, mask=mask, bias=bias)
+            o = torch.matmul(attn, v)
+            del attn, v
+
+            o = o.transpose(-2, -3).contiguous()
+
         o = o.view(*o.shape[:-2], -1)
 
         if g is not None:
@@ -85,7 +104,6 @@ class Attention(nn.Module):
 
     def get_output_bias(self):
         return self.linear_o.bias
-
 
 class GlobalAttention(nn.Module):
     def __init__(self, input_dim, head_dim, num_heads, inf, eps):
