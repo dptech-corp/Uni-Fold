@@ -27,6 +27,33 @@ Use Flash-Attention in Uni-Fold
 Changeing the configuration `use_flash_attn` to `True` in `unifold/config.py`, you will use Flash-Attention acceleration for the Uni-Fold.
 
 
+Attention mask & Attention bias shape support
+------------
+
+```
+Support the shape of q/k/v as follow:
+q's shape [total_size * head, seq_q, head_dim]
+k's shape [total_size * head, seq_k, head_dim]
+v's shape [total_size * head, seq_k, head_dim]
+
+Attention Mask 
+[total_size, head, seq_q, seq_k]
+1. total_size must be the same with q's total_size
+2. head must be 1 or head like shape in q
+3. seq_q must be 1  
+4. seq_k must be the same with k's seq_k 
+
+
+Attention Bias
+[total_size, head, seq_q, seq_k]
+1. total_size must be 1
+3. head must be the same with q's head
+5. seq_q must be the same with q's seq_q 
+7. seq_k must be the same with k's seq_k 
+```
+
+If you need more different shape size suport, any contribution or discussion is welcome. 
+
 
 Notice
 ------------
