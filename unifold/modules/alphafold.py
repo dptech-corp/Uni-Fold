@@ -85,6 +85,7 @@ class AlphaFold(nn.Module):
         )
         self.evoformer = EvoformerStack(
             **config["evoformer_stack"],
+            use_flash_attn=self.globals.use_flash_attn,
         )
         self.structure_module = StructureModule(
             **config["structure_module"],

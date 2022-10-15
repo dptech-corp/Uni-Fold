@@ -30,6 +30,7 @@ class Attention(nn.Module):
         head_dim: int,
         num_heads: int,
         gating: bool = True,
+        use_flash_attn: bool = False,
     ):
         super(Attention, self).__init__()
 
@@ -46,6 +47,7 @@ class Attention(nn.Module):
             self.linear_g = Linear(q_dim, total_dim, init="gating")
         # precompute the 1/sqrt(head_dim)
         self.norm = head_dim**-0.5
+        self.use_flash_attn = use_flash_attn
 
     def forward(
         self,
@@ -54,7 +56,6 @@ class Attention(nn.Module):
         v: torch.Tensor,
         mask: torch.Tensor = None,
         bias: Optional[torch.Tensor] = None,
-        use_flash: bool = False,
         q_cu_seqlens: torch.Tensor = None,
         k_cu_seqlens: torch.Tensor = None,
     ) -> torch.Tensor:
@@ -69,9 +70,9 @@ class Attention(nn.Module):
         k = self.linear_k(k)
         v = self.linear_v(v)
 
-        if self.head_dim in (16, 32, 64, 128) and use_flash \
-            and q.shape == k.shape :
-            # fix: this is avoid model.template_pointwise_att.mha mask shape
+        if self.use_flash_attn and self.head_dim in (16, 32, 64, 128) \
+            and q.shape == k.shape:
+            # flash update
             q = q.view(q.shape[:-1] + (self.num_heads, -1))
             k = k.view(k.shape[:-1] + (self.num_heads, -1))
             v = v.view(v.shape[:-1] + (self.num_heads, -1))
@@ -176,6 +177,7 @@ class MSAAttention(nn.Module):
         num_heads,
         pair_bias=False,
         d_pair=None,
+        use_flash_attn=False,
     ):
         super(MSAAttention, self).__init__()
 
@@ -187,7 +189,7 @@ class MSAAttention(nn.Module):
             self.layer_norm_z = LayerNorm(d_pair)
             self.linear_z = Linear(d_pair, num_heads, bias=False, init="normal")
 
-        self.mha = Attention(d_in, d_in, d_in, d_hid, num_heads)
+        self.mha = Attention(d_in, d_in, d_in, d_hid, num_heads, use_flash_attn=use_flash_attn)
 
     @torch.jit.ignore
     def _chunk(
@@ -268,24 +270,26 @@ class MSAAttention(nn.Module):
 
 
 class MSARowAttentionWithPairBias(MSAAttention):
-    def __init__(self, d_msa, d_pair, d_hid, num_heads):
+    def __init__(self, d_msa, d_pair, d_hid, num_heads, use_flash_attn=False):
         super(MSARowAttentionWithPairBias, self).__init__(
             d_msa,
             d_hid,
             num_heads,
             pair_bias=True,
             d_pair=d_pair,
+            use_flash_attn=False
         )
 
 
 class MSAColumnAttention(MSAAttention):
-    def __init__(self, d_msa, d_hid, num_heads):
+    def __init__(self, d_msa, d_hid, num_heads, use_flash_attn=False):
         super(MSAColumnAttention, self).__init__(
             d_in=d_msa,
             d_hid=d_hid,
             num_heads=num_heads,
             pair_bias=False,
             d_pair=None,
+            use_flash_attn=use_flash_attn,
         )
 
     def forward(
@@ -371,12 +375,13 @@ class TriangleAttention(nn.Module):
         d_hid,
         num_heads,
         starting,
+        use_flash_attn=False,
     ):
         super(TriangleAttention, self).__init__()
         self.starting = starting
         self.layer_norm = LayerNorm(d_in)
         self.linear = Linear(d_in, num_heads, bias=False, init="normal")
-        self.mha = Attention(d_in, d_in, d_in, d_hid, num_heads)
+        self.mha = Attention(d_in, d_in, d_in, d_hid, num_heads, use_flash_attn=use_flash_attn)
 
     @torch.jit.ignore
     def _chunk(
