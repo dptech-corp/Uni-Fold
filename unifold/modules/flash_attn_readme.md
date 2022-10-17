@@ -47,9 +47,9 @@ Attention Mask
 Attention Bias
 [total_size, head, seq_q, seq_k]
 1. total_size must be 1
-3. head must be the same with q's head
-5. seq_q must be the same with q's seq_q 
-7. seq_k must be the same with k's seq_k 
+2. head must be the same with q's head
+3. seq_q must be the same with q's seq_q
+4. seq_k must be the same with k's seq_k
 ```
 
 If you need more different shape size suport, any contribution or discussion is welcome. 

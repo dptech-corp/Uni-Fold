@@ -1,6 +1,16 @@
 import torch
 import torch.nn.functional as F
+import functools
+
 from flash_attn.flash_attn_interface import flash_attn_unpadded_func
+
+
+@functools.lru_cache(maxsize=16)
+def gen_cu_seqlen(batch_size, n, device="cuda"):
+    cu_seqlens = torch.arange(
+            0, (batch_size + 1) * n, step=n, dtype=torch.int32, device=device
+        )
+    return cu_seqlens
 
 
 def _flash_attn(q, k, v, mask=None, bias=None, q_cu_seqlens=None, k_cu_seqlens=None):
@@ -27,16 +37,10 @@ def _flash_attn(q, k, v, mask=None, bias=None, q_cu_seqlens=None, k_cu_seqlens=N
     v = v.view(-1, *v.shape[-2:])
 
     q_max_s = n
-    if q_cu_seqlens is None:
-        q_cu_seqlens = torch.arange(
-            0, (batch_size + 1) * n, step=n, dtype=torch.int32, device=q.device
-        )
+    q_cu_seqlens = gen_cu_seqlen(batch_size, q_max_s, q.device)
 
     k_max_s = k_n
-    if k_cu_seqlens is None:
-        k_cu_seqlens = torch.arange(
-            0, (k_batch_size + 1) * k_n, step=k_n, dtype=torch.int32, device=k.device
-        )
+    k_cu_seqlens = gen_cu_seqlen(k_batch_size, k_max_s, k.device)
 
     if mask is not None:
         mask_heads, tgt_len, src_len = mask.shape[-3:]
