@@ -52,7 +52,7 @@ Attention Bias
 4. seq_k must be the same with k's seq_k
 ```
 
-If you need more different shape size suport, any contribution or discussion is welcome. 
+If you need more different shape size support, any contribution or discussion is welcome. 
 
 
 Notice

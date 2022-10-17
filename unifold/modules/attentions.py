@@ -106,6 +106,7 @@ class Attention(nn.Module):
     def get_output_bias(self):
         return self.linear_o.bias
 
+
 class GlobalAttention(nn.Module):
     def __init__(self, input_dim, head_dim, num_heads, inf, eps):
         super(GlobalAttention, self).__init__()
@@ -277,7 +278,7 @@ class MSARowAttentionWithPairBias(MSAAttention):
             num_heads,
             pair_bias=True,
             d_pair=d_pair,
-            use_flash_attn=False
+            use_flash_attn=use_flash_attn
         )
 
 
