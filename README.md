@@ -95,7 +95,7 @@ Make sure there is at least 3TB storage space for downloading (~500GB) and uncom
 
 Inferenece and finetuning with Uni-Fold requires pretrained model parameters. Use the following command to download the parameters:
 ```bash
-wget https://uni-fold.dp.tech/unifold_params_2022-08-01.tar.gz
+wget https://github.com/dptech-corp/Uni-Fold/releases/download/v2.2.0/uf_symmetry_params_2022-09-06.tar.gz
 tar -zxf unifold_params_2022-08-01.tar.gz
 ```
 It contains 1 **monomer** and 1 **multimer** pretrained model parameters, whose model name are `model_2_ft` and `multimer_ft` respectively.
@@ -195,7 +195,7 @@ Besides the notices in the previous section, additionaly note that:
 To run UF-Symmetry, please first install the newest version of Uni-Fold, and download the parameters of UF-Symmetry:
 
 ```bash
-wget https://uni-fold.dp.tech/uf_symmetry_params_2022-09-06.tar.gz
+wget https://github.com/dptech-corp/Uni-Fold/releases/download/v2.0.0/unifold_params_2022-08-01.tar.gz
 tar -zxf uf_symmetry_params_2022-09-06.tar.gz
 ```
 
