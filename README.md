@@ -195,7 +195,7 @@ Besides the notices in the previous section, additionaly note that:
 To run UF-Symmetry, please first install the newest version of Uni-Fold, and download the parameters of UF-Symmetry:
 
 ```bash
-wget https://github.com/dptech-corp/Uni-Fold/releases/download/v2.0.0/unifold_params_2022-08-01.tar.gz
+wget https://github.com/dptech-corp/Uni-Fold/releases/download/v2.0.0/uf_symmetry_params_2022-09-06.tar.gz
 tar -zxf uf_symmetry_params_2022-09-06.tar.gz
 ```
 
