@@ -39,6 +39,10 @@ fi
 
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 
+# Uni-Fold has own parameters, so one does not need alphafold parameters.
+# One may enable the following command and convert alphafold parameters for
+# specific benchmark purposes.
+
 # echo "Downloading AlphaFold parameters..."
 # bash "${SCRIPT_DIR}/download_alphafold_params.sh" "${DOWNLOAD_DIR}"
 
