@@ -18,7 +18,7 @@ from setuptools import setup
 
 setup(
     name="unifold",
-    version="2.2.0",
+    version="2.2.1",
     description="An open-source platform for developing protein folding models beyond AlphaFold.",
     author="DP Technology",
     author_email="unifold@dp.tech",
