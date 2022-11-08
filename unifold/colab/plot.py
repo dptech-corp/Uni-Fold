@@ -15,18 +15,18 @@ from unifold.data import protein
 
 def colab_plot(
     best_result: Mapping[str, Any],
-    symmetry_group: Optional[str],
-    is_multimer: bool,
     output_dir: str,
     show_sidechains: bool = False,
     dpi: int = 100,
 ):
     best_protein = best_result["protein"]
+    best_plddt = best_result["plddt"]
+    best_pae = best_result.get("pae", None)
+    
     to_visualize_pdb = protein.to_pdb(best_protein)
 
-
     # --- Visualise the prediction & confidence ---
-    if is_multimer and symmetry_group is None:
+    if best_pae is not None:
         multichain_view = py3Dmol.view(width=800, height=600)
         multichain_view.addModelsAsFrames(to_visualize_pdb)
         multichain_style = {'cartoon': {'colorscheme': 'chain'}}
@@ -57,14 +57,11 @@ def colab_plot(
     display.display(grid)
 
     # Display pLDDT and predicted aligned error (if output by the model).
-    if is_multimer and symmetry_group is None:
-        num_plots = 2
-    else:
-        num_plots = 1
+    num_plots = 1 if best_pae is None else 2
 
     plt.figure(figsize=[8 * num_plots , 6])
     plt.subplot(1, num_plots, 1)
-    plt.plot(best_result["plddt"] * 100)
+    plt.plot(best_plddt * 100)
     plt.title('Predicted LDDT')
     plt.xlabel('Residue')
     plt.ylabel('pLDDT')
@@ -72,8 +69,7 @@ def colab_plot(
     plddt_svg_path = os.path.join(output_dir, 'plddt.svg')
     plt.savefig(plddt_svg_path, dpi=dpi, bbox_inches='tight')
 
-    if num_plots == 2:
-        best_pae = best_result["pae"]
+    if best_pae is not None:
         plt.subplot(1, 2, 2)
         max_pae = np.max(best_pae)
         colors = ['#0F006F','#245AE6','#55CCFF','#FFFFFF']

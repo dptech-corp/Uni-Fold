@@ -10,7 +10,6 @@ from unicore.utils import (
 
 from unifold.config import model_config
 from unifold.modules.alphafold import AlphaFold
-from unifold.dataset import load_and_process, UnifoldDataset
 from unifold.data import protein, residue_constants
 from unifold.colab.data import load_feature_for_one_target
 from unifold.symmetry import (
@@ -156,7 +155,7 @@ def colab_inference(
                 best_result = {
                     "protein": cur_protein,
                     "plddt": out["plddt"],
-                    "pae": out["predicted_aligned_error"]
+                    "pae": None
                 }
 
     print("plddts", plddts)
