@@ -38,7 +38,6 @@ def colab_inference(
     if symmetry_group is not None:
         model_name = "uf_symmetry"
         param_path = os.path.join(param_dir, "uf_symmetry.pt")
-        "./uf_symmetry.pt"
     elif is_multimer:
         model_name = "multimer_ft"
         param_path = os.path.join(param_dir, "multimer.unifold.pt")
@@ -86,7 +85,13 @@ def colab_inference(
             symmetry_group=symmetry_group,
         )
         seq_len = batch["aatype"].shape[-1]
-        model.globals.chunk_size = automatic_chunk_size(seq_len, device, is_bf16=False)
+        chunk_size, block_size = automatic_chunk_size(
+                                    seq_len,
+                                    device,
+                                    is_bf16=False,
+                                )
+        model.globals.chunk_size = chunk_size
+        model.globals.block_size = block_size
 
         with torch.no_grad():
             batch = {
