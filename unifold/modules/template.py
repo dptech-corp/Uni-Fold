@@ -1,5 +1,6 @@
 from functools import partial
 from typing import Optional, List, Tuple
+import math
 
 import torch
 import torch.nn as nn
@@ -9,7 +10,7 @@ from .common import (
     SimpleModuleList,
     residual,
     bias_dropout_residual,
-    bias_gated_dropout_residual,
+    tri_mul_residual,
 )
 from .common import Linear, Transition, chunk_layer
 from .attentions import (
@@ -17,6 +18,7 @@ from .attentions import (
     TriangleAttentionStarting,
     TriangleAttentionEnding,
 )
+from .featurization import build_template_pair_feat_v2
 from .triangle_multiplication import (
     TriangleMultiplicationOutgoing,
     TriangleMultiplicationIncoming,
@@ -24,6 +26,7 @@ from .triangle_multiplication import (
 from unicore.utils import (
     checkpoint_sequential,
     permute_final_dims,
+    tensor_tree_map
 )
 from unicore.modules import LayerNorm
 
@@ -158,6 +161,7 @@ class TemplatePairStackBlock(nn.Module):
         tri_start_attn_mask: torch.Tensor,
         tri_end_attn_mask: torch.Tensor,
         chunk_size: Optional[int] = None,
+        block_size: Optional[int] = None,
     ):
         if self.tri_attn_first:
             s = bias_dropout_residual(
@@ -179,40 +183,44 @@ class TemplatePairStackBlock(nn.Module):
                 self.dropout,
                 self.training,
             )
-            s = bias_gated_dropout_residual(
+            s = tri_mul_residual(
                 self.tri_mul_out,
                 s,
-                self.tri_mul_out(s, mask=mask),
+                self.tri_mul_out(s, mask=mask, block_size=block_size),
                 self.row_dropout_share_dim,
                 self.dropout,
                 self.training,
+                block_size=block_size,
             )
 
-            s = bias_gated_dropout_residual(
+            s = tri_mul_residual(
                 self.tri_mul_in,
                 s,
-                self.tri_mul_in(s, mask=mask),
+                self.tri_mul_in(s, mask=mask, block_size=block_size),
                 self.row_dropout_share_dim,
                 self.dropout,
                 self.training,
+                block_size=block_size,
             )
         else:
-            s = bias_gated_dropout_residual(
+            s = tri_mul_residual(
                 self.tri_mul_out,
                 s,
-                self.tri_mul_out(s, mask=mask),
+                self.tri_mul_out(s, mask=mask, block_size=block_size),
                 self.row_dropout_share_dim,
                 self.dropout,
                 self.training,
+                block_size=block_size,
             )
 
-            s = bias_gated_dropout_residual(
+            s = tri_mul_residual(
                 self.tri_mul_in,
                 s,
-                self.tri_mul_in(s, mask=mask),
+                self.tri_mul_in(s, mask=mask, block_size=block_size),
                 self.row_dropout_share_dim,
                 self.dropout,
                 self.training,
+                block_size=block_size,
             )
 
             s = bias_dropout_residual(
@@ -240,6 +248,7 @@ class TemplatePairStackBlock(nn.Module):
                 s,
                 chunk_size=chunk_size,
             ),
+            self.training
         )
         return s
 
@@ -285,12 +294,10 @@ class TemplatePairStack(nn.Module):
         tri_end_attn_mask: torch.Tensor,
         templ_dim: int,
         chunk_size: int,
+        block_size: int,
         return_mean: bool,
     ):
-        new_single_templates = []
-        sum = 0.0
-        count = 0
-        for s in single_templates:
+        def one_template(i):
             (s,) = checkpoint_sequential(
                 functions=[
                     partial(
@@ -299,20 +306,29 @@ class TemplatePairStack(nn.Module):
                         tri_start_attn_mask=tri_start_attn_mask,
                         tri_end_attn_mask=tri_end_attn_mask,
                         chunk_size=chunk_size,
+                        block_size=block_size,
                     )
                     for b in self.blocks
                 ],
-                input=(s,),
+                input=(single_templates[i],),
             )
+            return s
+
+        n_templ = len(single_templates)
+        if n_templ > 0:
+            new_single_templates = [one_template(0)]
             if return_mean:
-                s = self.layer_norm(s)
-                sum = sum + s
-                count += 1
-            else:
-                new_single_templates.append(s)
+                t = self.layer_norm(new_single_templates[0])
+            for i in range(1, n_templ):
+                s = one_template(i)
+                if return_mean:
+                    t = residual(t, self.layer_norm(s), self.training)
+                else:
+                    new_single_templates.append(s)
+
         if return_mean:
-            if count > 0:
-                t = sum / count
+            if n_templ > 0:
+                t /= n_templ
             else:
                 t = None
         else:

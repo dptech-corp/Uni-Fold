@@ -77,6 +77,7 @@ class Transition(nn.Module):
         self.linear_2 = Linear(self.n * self.d_in, d_in, init="final")
 
     def _transition(self, x):
+        x = self.layer_norm(x)
         x = self.linear_1(x)
         x = self.act(x)
         x = self.linear_2(x)
@@ -100,8 +101,6 @@ class Transition(nn.Module):
         x: torch.Tensor,
         chunk_size: Optional[int] = None,
     ) -> torch.Tensor:
-
-        x = self.layer_norm(x)
 
         if chunk_size is not None:
             x = self._chunk(x, chunk_size)
@@ -174,8 +173,12 @@ class OuterProductMean(nn.Module):
             mask = mask * (mask.size(-2) ** -0.5)
         a = self.linear_1(m)
         b = self.linear_2(m)
-        a = a * mask
-        b = b * mask
+        if self.training:
+            a = a * mask
+            b = b * mask
+        else:
+            a *= mask
+            b *= mask
 
         a = a.transpose(-2, -3)
         b = b.transpose(-2, -3)
@@ -194,8 +197,12 @@ class OuterProductMean(nn.Module):
         return z
 
 
-def residual(residual, x):
-    return x + residual
+def residual(residual, x, training):
+    if training:
+        return x + residual
+    else:
+        residual += x
+        return residual
 
 
 @torch.jit.script
@@ -215,7 +222,8 @@ def fused_bias_dropout_add_inference(
     bias: torch.Tensor,
     residual: torch.Tensor,
 ) -> torch.Tensor:
-    return x + bias + residual
+    residual += bias + x
+    return residual
 
 
 def bias_dropout_residual(module, residual, x, dropout_shared_dim, prob, training):
@@ -247,23 +255,18 @@ def fused_bias_gated_dropout_add(
     ) + residual
 
 
-@torch.jit.script
-def fused_bias_gated_dropout_add_inference(
-    x: torch.Tensor,
-    bias: torch.Tensor,
-    g: torch.Tensor,
-    g_bias: torch.Tensor,
-    residual: torch.Tensor,
-) -> torch.Tensor:
-    return (torch.sigmoid(g + g_bias) * (x + bias)) + residual
-
-
-def bias_gated_dropout_residual(
-    module, residual, outputs, dropout_shared_dim, prob, training
+def tri_mul_residual(
+    module,
+    residual,
+    outputs,
+    dropout_shared_dim,
+    prob,
+    training,
+    block_size,
 ):
-    x, g = outputs
-    bias, g_bias = module.get_output_bias()
     if training:
+        x, g = outputs
+        bias, g_bias = module.get_output_bias()
         shape = list(x.shape)
         shape[dropout_shared_dim] = 1
         with torch.no_grad():
@@ -277,8 +280,15 @@ def bias_gated_dropout_residual(
             mask,
             prob,
         )
+    elif block_size is None:
+        x, g = outputs
+        bias, g_bias = module.get_output_bias()
+        residual += (torch.sigmoid(g + g_bias) * (x + bias))
+        return residual
     else:
-        return fused_bias_gated_dropout_add_inference(x, bias, g, g_bias, residual)
+        # gated is not used here
+        residual += outputs
+        return residual
 
 
 class SimpleModuleList(nn.ModuleList):

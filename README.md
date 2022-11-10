@@ -1,27 +1,28 @@
 # Uni-Fold: an open-source platform for developing protein models beyond AlphaFold.
 
+[[bioRxiv](https://doi.org/10.1101/2022.08.04.502811)], [[Uni-Fold Colab](https://colab.research.google.com/github/dptech-corp/Uni-Fold/blob/main/notebooks/unifold.ipynb)], [[Hermite™](https://hermite.dp.tech/)]
+
+[[UF-Symmetry bioRxiv](https://www.biorxiv.org/content/10.1101/2022.08.30.505833)]
+
 We proudly present Uni-Fold as a thoroughly open-source platform for developing protein models beyond [AlphaFold](https://github.com/deepmind/alphafold/). Uni-Fold introduces the following features:
 
 - Reimplemented AlphaFold and AlphaFold-Multimer models in PyTorch framework. **This is currently the first (if any else) open-source repository that supports training AlphaFold-Multimer.**
-
 - Model correctness proved by successful from-scratch training with equivalent accuracy, both monomer and multimer included.
-
 - Highest efficiency among existing AlphaFold implementations (to our knowledge).
-
 - Easy distributed training based on [Uni-Core](https://github.com/dptech-corp/Uni-Core/), as well as other conveniences including half-precision training (`float16/bfloat16`), per-sample gradient clipping, and fused CUDA kernels.
+- Fast prediction of large symmetric complexes with UF-Symmetry.
 
-- Convenient web server at [Hermite™](https://hermite.dp.tech/). [More Information](#inference-on-hermite)
 
-![case](./img/7t6u.png)
+![case](./img/case.png)
 <center>
 <small>
-Figure 1. Uni-Fold successfully predicted the interaction between the nanobody and the GPCR-G protein complex, while AlphaFold-Multimer failed.
+Figure 1. Uni-Fold has equivalent or better performances compared with AlphaFold.
 </small>
 </center>
 
 &nbsp;
 
-We evaluated Uni-Fold on PDB structures release after our training set with less than 40% template identity. The structures for evaluations are included in [`evaluation`](./evaluation). Uni-Fold enjoys similar monomer prediction accuracy and better multimer prediction accuracy compared with AlphaFold(-Multimer). We also benchmarked the efficiency of Uni-Fold. The end-to-end training speed of Uni-Fold is about 2.2 times of the official AlphaFold. More evaluation results and details are included in our [bioRxiv preprint](https://www.biorxiv.org/content/10.1101/2022.08.04.502811).
+We evaluated Uni-Fold on PDB structures release after our training set with less than 40% template identity. The structures for evaluations are included in [`evaluation`](./evaluation). Uni-Fold enjoys similar monomer prediction accuracy and better multimer prediction accuracy compared with AlphaFold(-Multimer). We also benchmarked the efficiency of Uni-Fold. The end-to-end training efficiency is about 2.2 times of the official AlphaFold. More evaluation results and details are included in our [bioRxiv preprint](https://doi.org/10.1101/2022.08.04.502811).
 
 ![case](./img/accuracy.png)
 <center>
@@ -45,16 +46,30 @@ The name Uni-Fold is inherited from our previous repository, [Uni-Fold-JAX](http
 
 ---
 
+## NEWEST in Uni-Fold
+
+[2022-09-06] We released the code of Uni-Fold Symmetry (UF-Symmetry), a fast solution to fold large symmetric protein complexes. The details of UF-Symmetry can be found in [bioRxiv: Uni-Fold Symmetry: Harnessing Symmetry in Folding Large Protein Complexes](https://doi.org/10.1101/2022.08.30.505833). The code of UF-Symmetry is concentrated in the folder [`unifold/symmetry`](./unifold/symmetry/).
+
+![case](./img/uf-symmetry-effect.gif)
+<center>
+<small>
+Figure 4. Prediction of UF-Symmetry. AlphaFold etc. failed due to OOM errors.
+</small>
+</center>
+
+&nbsp;
+
 ## Installation and Preparations
 
 ### Installing Uni-Fold
 
-Uni-Fold is implemented on a distributed PyTorch framework, [Uni-Core](https://github.com/dptech-corp/Uni-Core). As Uni-Core needs to compile CUDA kernels in installation which requires specific CUDA and PyTorch versions, we provide a Docker image to save potential trouble. 
+Uni-Fold is implemented on a distributed PyTorch framework, [Uni-Core](https://github.com/dptech-corp/Uni-Core#installation). 
+As Uni-Core needs to compile CUDA kernels in installation which requires specific CUDA and PyTorch versions, we provide a Docker image to save potential trouble.
 
 To use GPUs within docker you need to [install nvidia-docker-2](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker) first. Use the following command to pull the docker image:
 
 ```bash
-docker pull dptechnology/unifold:pytorch1.11.0-cuda11.3-latest
+docker pull dptechnology/unifold:latest-pytorch1.11.0-cuda11.3
 ```
 
 Then, you can create and attach into the docker container, and clone & install unifold.
@@ -70,7 +85,7 @@ pip install -e .
 Training and inference with Uni-Fold require homology searches on sequence and structure databases. Use the following command to download these databases:
 
 ```bash
-  bash scripts/download_all_data.sh /path/to/database/directory
+  bash scripts/download/download_all_data.sh /path/to/database/directory
 ```
 
 Make sure there is at least 3TB storage space for downloading (~500GB) and uncompressing the databases.
@@ -80,7 +95,7 @@ Make sure there is at least 3TB storage space for downloading (~500GB) and uncom
 
 Inferenece and finetuning with Uni-Fold requires pretrained model parameters. Use the following command to download the parameters:
 ```bash
-wget https://uni-fold.dp.tech/unifold_params_2022-08-01.tar.gz
+wget https://github.com/dptech-corp/Uni-Fold/releases/download/v2.2.0/unifold_params_2022-08-01.tar.gz
 tar -zxf unifold_params_2022-08-01.tar.gz
 ```
 It contains 1 **monomer** and 1 **multimer** pretrained model parameters, whose model name are `model_2_ft` and `multimer_ft` respectively.
@@ -109,7 +124,7 @@ bash run_unifold.sh \
     /path/to/the/output/directory/ \  # output directory
     /path/to/database/directory/ \    # directory of databases
     2020-05-01 \                      # use templates before this date
-    model_name \                      # specify model name, must be consistent with model parameters
+    $model_name \                     # specify model name, must be consistent with model parameters
     /path/to/model_parameters.pt      # model parameters
 ```
 
@@ -148,14 +163,14 @@ Run the following command to train Uni-Fold Monomer/Multimer from-scratch:
 bash train_monomer.sh \                 # train_multimer.sh for multimer
     /path/to/training/data/directory/ \ # dataset directory
     /path/to/output/directory/ \        # output directory where parameters are stored
-    model_2_af2                         # model name
+    model_2                             # model name
 ```
 
 Note that:
 
 1. The dataset directory should be configurated in a similar way as the [example data](example_data).
 2. The output directory should have enough space to store model parameters (~1.5GB per checkpoint, so empirically 60GB satisfies the default configuration in the shell script).
-3. We provide several default model names in [config.py](unifold/config.py), namely `model_1`, `model_2`, `model_2_af2` etc. for monomer models and `multimer`, `multimer_af2` etc. for multimer models. Check `model_config()` function for the differences between model names. You may also personalize your own model by modifying the function (i.e. forking the if-elses).
+3. We provide several default model names in [config.py](unifold/config.py), namely `model_1`, `model_2`, `model_2_ft` etc. for monomer models and `multimer`, `multimer_ft` etc. for multimer models. Check `model_config()` function for the differences between model names. You may also personalize your own model by modifying the function (i.e. forking the if-elses).
 
 
 ### Finetuning
@@ -167,7 +182,7 @@ bash finetune_monomer.sh \              # finetune_multimer.sh for multimer
     /path/to/training/data/directory/ \ # dataset directory
     /path/to/output/directory/ \        # output directory where parameters are stored
     /path/to/pretrained/parameters.pt \ # pretrained parameters
-    model_2_af2                         # model name
+    model_2_ft                          # model name
 ```
 
 Besides the notices in the previous section, additionaly note that:
@@ -175,9 +190,36 @@ Besides the notices in the previous section, additionaly note that:
 1. The model architecture should be correctly specified by the model name.
 2. Checkpoints must be in Uni-Fold format (`*.pt`).
 
+## Run UF-Symmetry
+
+To run UF-Symmetry, please first install the newest version of Uni-Fold, and download the parameters of UF-Symmetry:
+
+```bash
+wget https://github.com/dptech-corp/Uni-Fold/releases/download/v2.0.0/uf_symmetry_params_2022-09-06.tar.gz
+tar -zxf uf_symmetry_params_2022-09-06.tar.gz
+```
+
+Run
+
+```bash
+bash run_uf_symmetry.sh \
+    /path/to/the/input.fasta \        # target fasta file, include AU only
+    C3 \                              # desired symmetry group
+    /path/to/the/output/directory/ \  # output directory
+    /path/to/database/directory/ \    # directory of databases
+    2020-05-01 \                      # use templates before this date
+    /path/to/model_parameters.pt      # model parameters
+```
+
+to inference with UF-Symmetry. **Note that the input FASTA file should contain the sequences of the asymmetric unit only, and a symmetry group must be specified for the model.**
+
 ## Inference on Hermite
 
 We provide covenient structure prediction service on [Hermite™](https://hermite.dp.tech/), a new-generation drug design platform powered by AI, physics, and computing. Users only need to upload sequences of protein monomers and multimers to obtain the predicted structures from Uni-Fold, acompanied by various analyzing tools. [Click here](https://docs.google.com/document/d/1iFdezkKJVuhyqN3WvzsC7-422T-zf18IhP7M9CBj5gs) for more information of how to use Hermite™.
+
+## Features introduced by the community
+
+- **Faster Inference with BladeDISC.** Alibaba PAI team proposed an end-to-end DynamIc Shape Compiler [BladeDISC](https://github.com/alibaba/BladeDISC), which optimized Uni-Fold to achieve faster inference speed and longer sequences inference. For detailed introduction, please see [examples](https://github.com/alibaba/BladeDISC/tree/main/examples/PyTorch/Inference/CUDA/AlphaFold) in BladeDISC.
 
 ## Citing this work
 
@@ -189,8 +231,22 @@ If you use the code, the model parameters, the web server at [Hermite™](https:
 	title = {Uni-Fold: An Open-Source Platform for Developing Protein Folding Models beyond AlphaFold},
 	year = {2022},
 	doi = {10.1101/2022.08.04.502811},
-	URL = {https://www.biorxiv.org/content/early/2022/08/06/2022.08.04.502811},
-	eprint = {https://www.biorxiv.org/content/early/2022/08/06/2022.08.04.502811.full.pdf},
+	URL = {https://www.biorxiv.org/content/10.1101/2022.08.04.502811v3},
+	eprint = {https://www.biorxiv.org/content/10.1101/2022.08.04.502811v3.full.pdf},
+	journal = {bioRxiv}
+}
+```
+
+If you use the relative utilities of UF-Symmetry, please cite
+
+```bibtex
+@article {uf-symmetry,
+	author = {Li, Ziyao and Yang, Shuwen and Liu, Xuyang and Chen, Weijie and Wen, Han and Shen, Fan and Ke, Guolin and Zhang, Linfeng},
+	title = {Uni-Fold Symmetry: Harnessing Symmetry in Folding Large Protein Complexes},
+	year = {2022},
+	doi = {10.1101/2022.08.30.505833},
+	URL = {https://www.biorxiv.org/content/early/2022/08/30/2022.08.30.505833},
+	eprint = {https://www.biorxiv.org/content/early/2022/08/30/2022.08.30.505833.full.pdf},
 	journal = {bioRxiv}
 }
 ```

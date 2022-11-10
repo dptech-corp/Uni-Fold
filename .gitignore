@@ -120,3 +120,4 @@ test/
 *.tfevents.*
 *.sto
 *.a3m
+nogit/

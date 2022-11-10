@@ -10,7 +10,7 @@ from .common import (
     SimpleModuleList,
     residual,
     bias_dropout_residual,
-    bias_gated_dropout_residual,
+    tri_mul_residual,
 )
 from .attentions import (
     MSARowAttentionWithPairBias,
@@ -129,9 +129,13 @@ class EvoformerIteration(nn.Module):
         tri_start_attn_mask: torch.Tensor,
         tri_end_attn_mask: torch.Tensor,
         chunk_size: Optional[int] = None,
+        block_size: Optional[int] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
 
         if scg.get_bp_world_size() > 1:
+
+
+            assert self.outer_product_mean_pos == 'end', "Branch Parallellism only support outer_product_mean_pos == 'end'"
 
             # Note(GuoxiaWang): add zeros trigger the status of stop_gradient=False within recompute context.
             z = z + torch.zeros_like(z)
@@ -153,7 +157,10 @@ class EvoformerIteration(nn.Module):
                     self.training,
                 )
                 if self._is_extra_msa_stack:
-                    m = residual(m, self.msa_att_col(m, mask=msa_mask, chunk_size=chunk_size))
+                    m = residual(
+                        m, self.msa_att_col(m, mask=msa_mask, chunk_size=chunk_size),
+                        self.training
+                    )
                 else:
                     m = bias_dropout_residual(
                         self.msa_att_col,
@@ -163,28 +170,32 @@ class EvoformerIteration(nn.Module):
                         self.msa_dropout,
                         self.training,
                     )
-                m = residual(m, self.msa_transition(m, chunk_size=chunk_size))
-                if self.outer_product_mean_pos == 'middle' or self.outer_product_mean_pos == 'end':
-                    outer = self.outer_product_mean(m, mask=msa_mask, chunk_size=chunk_size)
+                m = residual(
+                    m, self.msa_transition(m, chunk_size=chunk_size),
+                    self.training,
+                )
+                outer = self.outer_product_mean(m, mask=msa_mask, chunk_size=chunk_size)
 
             if scg.get_bp_rank_in_group() == 1:
 
-                z = bias_gated_dropout_residual(
+                z = tri_mul_residual(
                     self.tri_mul_out,
                     z,
-                    self.tri_mul_out(z, mask=pair_mask),
+                    self.tri_mul_out(z, mask=pair_mask, block_size=block_size),
                     self.row_dropout_share_dim,
                     self.pair_dropout,
                     self.training,
+                    block_size=block_size,
                 )
 
-                z = bias_gated_dropout_residual(
+                z = tri_mul_residual(
                     self.tri_mul_in,
                     z,
-                    self.tri_mul_in(z, mask=pair_mask),
+                    self.tri_mul_in(z, mask=pair_mask, block_size=block_size),
                     self.row_dropout_share_dim,
                     self.pair_dropout,
                     self.training,
+                    block_size=block_size,
                 )
 
                 z = bias_dropout_residual(
@@ -204,12 +215,15 @@ class EvoformerIteration(nn.Module):
                     self.pair_dropout,
                     self.training,
                 )
-                z = residual(z, self.pair_transition(z, chunk_size=chunk_size))
+                z = residual(
+                    z, self.pair_transition(z, chunk_size=chunk_size),
+                    self.training,
+                )
                 outer = torch.zeros_like(z)
                 outer.requires_grad = z.requires_grad
-                # m = m.clone()
 
-            m, z = bp.sync_evoformer_results(outer, m, z)
+            # Note(GuoxiaWang): z = residual(z, outer) in sync_evoformer_results
+            m, z = bp.sync_evoformer_results(outer, m, z, self.training)
             z = z.clone()
             m = m.clone()
 
@@ -217,7 +231,8 @@ class EvoformerIteration(nn.Module):
 
             if self.outer_product_mean_pos == 'first':
                 z = residual(
-                    z, self.outer_product_mean(m, mask=msa_mask, chunk_size=chunk_size)
+                    z, self.outer_product_mean(m, mask=msa_mask, chunk_size=chunk_size),
+                    self.training
                 )
 
             m = bias_dropout_residual(
@@ -231,7 +246,10 @@ class EvoformerIteration(nn.Module):
                 self.training,
             )
             if self._is_extra_msa_stack:
-                m = residual(m, self.msa_att_col(m, mask=msa_mask, chunk_size=chunk_size))
+                m = residual(
+                    m, self.msa_att_col(m, mask=msa_mask, chunk_size=chunk_size),
+                    self.training
+                )
             else:
                 m = bias_dropout_residual(
                     self.msa_att_col,
@@ -241,29 +259,34 @@ class EvoformerIteration(nn.Module):
                     self.msa_dropout,
                     self.training,
                 )
-            m = residual(m, self.msa_transition(m, chunk_size=chunk_size))
+            m = residual(
+                m, self.msa_transition(m, chunk_size=chunk_size),
+                self.training
+            )
             if self.outer_product_mean_pos == 'middle' or self.outer_product_mean_pos == 'end':
                 outer = self.outer_product_mean(m, mask=msa_mask, chunk_size=chunk_size)
 
             if self.outer_product_mean_pos == 'middle':
-                z = residual(z, outer)
+                z = residual(z, outer, self.training)
 
-            z = bias_gated_dropout_residual(
+            z = tri_mul_residual(
                 self.tri_mul_out,
                 z,
-                self.tri_mul_out(z, mask=pair_mask),
+                self.tri_mul_out(z, mask=pair_mask, block_size=block_size),
                 self.row_dropout_share_dim,
                 self.pair_dropout,
                 self.training,
+                block_size=block_size,
             )
 
-            z = bias_gated_dropout_residual(
+            z = tri_mul_residual(
                 self.tri_mul_in,
                 z,
-                self.tri_mul_in(z, mask=pair_mask),
+                self.tri_mul_in(z, mask=pair_mask, block_size=block_size),
                 self.row_dropout_share_dim,
                 self.pair_dropout,
                 self.training,
+                block_size=block_size,
             )
 
             z = bias_dropout_residual(
@@ -283,11 +306,15 @@ class EvoformerIteration(nn.Module):
                 self.pair_dropout,
                 self.training,
             )
-            z = residual(z, self.pair_transition(z, chunk_size=chunk_size))
+
+            z = residual(
+                z, self.pair_transition(z, chunk_size=chunk_size),
+                self.training
+            )
 
             if self.outer_product_mean_pos == 'end':
                 z = residual(z, outer)
-        # print(f'rank: {dist.get_rank()}, size: {m.size()}, is_extra_msa_stack: {self._is_extra_msa_stack}')
+
         return m, z
 
 
@@ -355,6 +382,7 @@ class EvoformerStack(nn.Module):
         tri_start_attn_mask: torch.Tensor,
         tri_end_attn_mask: torch.Tensor,
         chunk_size: int,
+        block_size: int,
     ) -> Tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]:
         blocks = [
             partial(
@@ -366,6 +394,7 @@ class EvoformerStack(nn.Module):
                 tri_start_attn_mask=tri_start_attn_mask,
                 tri_end_attn_mask=tri_end_attn_mask,
                 chunk_size=chunk_size,
+                block_size=block_size
             )
             for b in self.blocks
         ]
@@ -436,6 +465,7 @@ class ExtraMSAStack(EvoformerStack):
         tri_start_attn_mask: torch.Tensor = None,
         tri_end_attn_mask: torch.Tensor = None,
         chunk_size: int = None,
+        block_size: int = None,
     ) -> torch.Tensor:
         _, z, _ = super().forward(
             m,
@@ -447,5 +477,6 @@ class ExtraMSAStack(EvoformerStack):
             tri_start_attn_mask=tri_start_attn_mask,
             tri_end_attn_mask=tri_end_attn_mask,
             chunk_size=chunk_size,
+            block_size=block_size
         )
         return z

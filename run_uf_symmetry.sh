@@ -1,8 +1,8 @@
 fasta_path=$1
-output_dir_base=$2
-database_dir=$3
-max_template_date=$4
-model_name=$5
+symmetry=$2
+output_dir_base=$3
+database_dir=$4
+max_template_date=$5
 param_path=$6
 
 echo "Starting homogeneous searching..."
@@ -23,8 +23,8 @@ python unifold/homo_search.py \
 echo "Starting prediction..."
 fasta_file=$(basename $fasta_path)
 target_name=${fasta_file%.fa*}
-python unifold/inference.py \
-	--model_name=$model_name \
+python unifold/inference_symmetry.py \
+	--symmetry=$symmetry \
 	--param_path=$param_path \
 	--data_dir=$output_dir_base \
 	--target_name=$target_name \
