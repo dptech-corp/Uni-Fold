@@ -316,7 +316,7 @@ def base_config():
                         "pair_dropout": 0.25,
                         "inf": 1e9,
                         "eps": 1e-10,
-                        "outer_product_mean_first": False,
+                        "outer_product_mean_pos": 'end',
                     },
                     "enabled": True,
                 },
@@ -336,7 +336,7 @@ def base_config():
                     "pair_dropout": 0.25,
                     "inf": 1e9,
                     "eps": 1e-10,
-                    "outer_product_mean_first": False,
+                    "outer_product_mean_pos": 'end',
                 },
                 "structure_module": {
                     "d_single": d_single,
