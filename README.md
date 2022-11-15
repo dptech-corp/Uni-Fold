@@ -48,6 +48,8 @@ The name Uni-Fold is inherited from our previous repository, [Uni-Fold-JAX](http
 
 ## NEWEST in Uni-Fold
 
+[2022-11-15] We released the full dataset used to train Uni-Fold.
+
 [2022-09-06] We released the code of Uni-Fold Symmetry (UF-Symmetry), a fast solution to fold large symmetric protein complexes. The details of UF-Symmetry can be found in [bioRxiv: Uni-Fold Symmetry: Harnessing Symmetry in Folding Large Protein Complexes](https://doi.org/10.1101/2022.08.30.505833). The code of UF-Symmetry is concentrated in the folder [`unifold/symmetry`](./unifold/symmetry/).
 
 ![case](./img/uf-symmetry-effect.gif)
@@ -157,7 +159,7 @@ This command starts a training process on the [demo data](example_data) included
 
 ### Full training dataset download
 
-The full training dataset used in Uni-Fold is hosted at [modelscope](https://modelscope.cn/datasets/DPTech/Uni-Fold-Data/summary). You can download it by th following instructions. 
+The full training dataset used in Uni-Fold is hosted at [modelscope](https://modelscope.cn/datasets/DPTech/Uni-Fold-Data/summary). You can download it by the following instructions. 
 
 First, install modelscope
 
