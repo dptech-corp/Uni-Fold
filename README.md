@@ -48,6 +48,8 @@ The name Uni-Fold is inherited from our previous repository, [Uni-Fold-JAX](http
 
 ## NEWEST in Uni-Fold
 
+[2022-11-15] We released the full dataset used to train Uni-Fold.
+
 [2022-09-06] We released the code of Uni-Fold Symmetry (UF-Symmetry), a fast solution to fold large symmetric protein complexes. The details of UF-Symmetry can be found in [bioRxiv: Uni-Fold Symmetry: Harnessing Symmetry in Folding Large Protein Complexes](https://doi.org/10.1101/2022.08.30.505833). The code of UF-Symmetry is concentrated in the folder [`unifold/symmetry`](./unifold/symmetry/).
 
 ![case](./img/uf-symmetry-effect.gif)
@@ -154,6 +156,32 @@ bash train_multimer_demo.sh .
 
 This command starts a training process on the [demo data](example_data) included in this repository. Note that this demo script only tests the correctness of package installation and does not reflect any true performances.
 
+
+### Full training dataset download
+
+The full training dataset used in Uni-Fold is hosted at [modelscope](https://modelscope.cn/datasets/DPTech/Uni-Fold-Data/summary). You can download it by the following instructions. 
+
+First, install modelscope
+
+```bash
+pip3 install https://databot-algo.oss-cn-zhangjiakou.aliyuncs.com/maas/modelscope-1.0.0-py3-none-any.whl 
+```
+
+Then, download the dataset in python
+
+```python
+import os
+data_path = "your_data_path"
+os.environ["CACHE_HOME"] = data_path
+
+from modelscope.msdatasets import MsDataset
+
+ds = MsDataset.load(dataset_name='Uni-Fold-Data', namespace='DPTech', split='train')
+
+# The data will be located at ${your_data_path}/modelscope/hub/datasets/downloads/DPTech/Uni-Fold-Data/master/*
+```
+
+The downloaded dataset could be directly used by Uni-Fold for the training.
 
 ### From-scratch Training
 
