@@ -155,6 +155,32 @@ bash train_multimer_demo.sh .
 This command starts a training process on the [demo data](example_data) included in this repository. Note that this demo script only tests the correctness of package installation and does not reflect any true performances.
 
 
+### Full training dataset download
+
+The full training dataset used in Uni-Fold is hosted at [modelscope](https://modelscope.cn/datasets/DPTech/Uni-Fold-Data/summary). You can download it by th following instructions. 
+
+First, install modelscope
+
+```bash
+pip3 install https://databot-algo.oss-cn-zhangjiakou.aliyuncs.com/maas/modelscope-1.0.0-py3-none-any.whl 
+```
+
+Then, download the dataset in python
+
+```python
+import os
+data_path = "your_data_path"
+os.environ["CACHE_HOME"] = data_path
+
+from modelscope.msdatasets import MsDataset
+
+ds = MsDataset.load(dataset_name='Uni-Fold-Data', namespace='DPTech', split='train')
+
+# The data will be located at ${your_data_path}/modelscope/hub/datasets/downloads/DPTech/Uni-Fold-Data/master/*
+```
+
+The downloaded dataset could be directly used by Uni-Fold for the training.
+
 ### From-scratch Training
 
 Run the following command to train Uni-Fold Monomer/Multimer from-scratch:
