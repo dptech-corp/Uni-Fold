@@ -105,10 +105,11 @@ It contains 1 **monomer** and 1 **multimer** pretrained model parameters, whose 
 ## Converting the AlphaFold and OpenFold parameters to Uni-Fold
 One can convert the pretrained AlphaFold and OpenFold parameters to Uni-Fold format via the following commands.
 ```bash
+model_name=model_2_af2                # specify model name, e.g. model_2_af2, multimer_af2
 python scripts/convert_alphafold_to_unifold.py \
     /path/to/alphafold_params.npz \   # AlphaFold params *.npz file
     /path/to/unifold_format.pt \      # save checkpoint in Uni-Fold format
-    alphafold_model_name \            # specify model name, e.g. model_2_af2, multimer_af2
+    $model_name
 ```
 
 ```bash
@@ -121,12 +122,13 @@ python scripts/convert_openfold_to_unifold.py \
 After properly configurating the environment and databases, run the following command to predict the structure of the target fasta:
 
 ```bash
+model_name=model_2_ft                 # specify model name, use `multimer_ft` for multimer prediction
 bash run_unifold.sh \
     /path/to/the/input.fasta \        # target fasta file
     /path/to/the/output/directory/ \  # output directory
     /path/to/database/directory/ \    # directory of databases
     2020-05-01 \                      # use templates before this date
-    $model_name \                     # specify model name, must be consistent with model parameters
+    $model_name \
     /path/to/model_parameters.pt      # model parameters
 ```
 
