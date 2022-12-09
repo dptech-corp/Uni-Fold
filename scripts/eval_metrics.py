@@ -174,7 +174,7 @@ def compute_monomer(gt_pdb, pred_pdb):
 
 def compute_multimer(gt_pdb, pred_pdb, entity, max_permutations=120):
     """
-    Compute monomer metrics
+    Compute multimer metrics
     : param gt_pdb: ground truth pdb file
     : param pred_pdb: predicted pdb file
     : param entity: entity names for the chains in the multimer, e.g. for a 2-chain multimer A2, entity = ["A", "A"],
