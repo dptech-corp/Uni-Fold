@@ -231,7 +231,7 @@
         "input_sequences = (sequence_1, sequence_2, sequence_3, sequence_4,\n",
         "                   sequence_5, sequence_6, sequence_7, sequence_8)\n",
         "\n",
-        "MIN_SINGLE_SEQUENCE_LENGTH = 16\n",
+        "MIN_SINGLE_SEQUENCE_LENGTH = 4\n",
         "MAX_SINGLE_SEQUENCE_LENGTH = 2500\n",
         "MAX_MULTIMER_LENGTH = 2500\n",
         "\n",
