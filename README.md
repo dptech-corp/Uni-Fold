@@ -48,6 +48,8 @@ The name Uni-Fold is inherited from our previous repository, [Uni-Fold-JAX](http
 
 ## NEWEST in Uni-Fold
 
+[2022-11-15] We released the full dataset used to train Uni-Fold.
+
 [2022-09-06] We released the code of Uni-Fold Symmetry (UF-Symmetry), a fast solution to fold large symmetric protein complexes. The details of UF-Symmetry can be found in [bioRxiv: Uni-Fold Symmetry: Harnessing Symmetry in Folding Large Protein Complexes](https://doi.org/10.1101/2022.08.30.505833). The code of UF-Symmetry is concentrated in the folder [`unifold/symmetry`](./unifold/symmetry/).
 
 ![case](./img/uf-symmetry-effect.gif)
@@ -95,7 +97,7 @@ Make sure there is at least 3TB storage space for downloading (~500GB) and uncom
 
 Inferenece and finetuning with Uni-Fold requires pretrained model parameters. Use the following command to download the parameters:
 ```bash
-wget https://uni-fold.dp.tech/unifold_params_2022-08-01.tar.gz
+wget https://github.com/dptech-corp/Uni-Fold/releases/download/v2.0.0/unifold_params_2022-08-01.tar.gz
 tar -zxf unifold_params_2022-08-01.tar.gz
 ```
 It contains 1 **monomer** and 1 **multimer** pretrained model parameters, whose model name are `model_2_ft` and `multimer_ft` respectively.
@@ -103,10 +105,11 @@ It contains 1 **monomer** and 1 **multimer** pretrained model parameters, whose 
 ## Converting the AlphaFold and OpenFold parameters to Uni-Fold
 One can convert the pretrained AlphaFold and OpenFold parameters to Uni-Fold format via the following commands.
 ```bash
+model_name=model_2_af2                # specify model name, e.g. model_2_af2, multimer_af2
 python scripts/convert_alphafold_to_unifold.py \
     /path/to/alphafold_params.npz \   # AlphaFold params *.npz file
     /path/to/unifold_format.pt \      # save checkpoint in Uni-Fold format
-    alphafold_model_name \            # specify model name, e.g. model_2_af2, multimer_af2
+    $model_name
 ```
 
 ```bash
@@ -119,12 +122,13 @@ python scripts/convert_openfold_to_unifold.py \
 After properly configurating the environment and databases, run the following command to predict the structure of the target fasta:
 
 ```bash
+model_name=model_2_ft                 # specify model name, use `multimer_ft` for multimer prediction
 bash run_unifold.sh \
     /path/to/the/input.fasta \        # target fasta file
     /path/to/the/output/directory/ \  # output directory
     /path/to/database/directory/ \    # directory of databases
     2020-05-01 \                      # use templates before this date
-    model_name \                      # specify model name, must be consistent with model parameters
+    $model_name \
     /path/to/model_parameters.pt      # model parameters
 ```
 
@@ -155,6 +159,32 @@ bash train_multimer_demo.sh .
 This command starts a training process on the [demo data](example_data) included in this repository. Note that this demo script only tests the correctness of package installation and does not reflect any true performances.
 
 
+### Full training dataset download
+
+The full training dataset used in Uni-Fold is hosted at [modelscope](https://modelscope.cn/datasets/DPTech/Uni-Fold-Data/summary). You can download it by the following instructions. 
+
+First, install modelscope
+
+```bash
+pip3 install https://databot-algo.oss-cn-zhangjiakou.aliyuncs.com/maas/modelscope-1.0.0-py3-none-any.whl 
+```
+
+Then, download the dataset in python
+
+```python
+import os
+data_path = "your_data_path"
+os.environ["CACHE_HOME"] = data_path
+
+from modelscope.msdatasets import MsDataset
+
+ds = MsDataset.load(dataset_name='Uni-Fold-Data', namespace='DPTech', split='train')
+
+# The data will be located at ${your_data_path}/modelscope/hub/datasets/downloads/DPTech/Uni-Fold-Data/master/*
+```
+
+The downloaded dataset could be directly used by Uni-Fold for the training.
+
 ### From-scratch Training
 
 Run the following command to train Uni-Fold Monomer/Multimer from-scratch:
@@ -163,14 +193,14 @@ Run the following command to train Uni-Fold Monomer/Multimer from-scratch:
 bash train_monomer.sh \                 # train_multimer.sh for multimer
     /path/to/training/data/directory/ \ # dataset directory
     /path/to/output/directory/ \        # output directory where parameters are stored
-    model_2_af2                         # model name
+    model_2                             # model name
 ```
 
 Note that:
 
 1. The dataset directory should be configurated in a similar way as the [example data](example_data).
 2. The output directory should have enough space to store model parameters (~1.5GB per checkpoint, so empirically 60GB satisfies the default configuration in the shell script).
-3. We provide several default model names in [config.py](unifold/config.py), namely `model_1`, `model_2`, `model_2_af2` etc. for monomer models and `multimer`, `multimer_af2` etc. for multimer models. Check `model_config()` function for the differences between model names. You may also personalize your own model by modifying the function (i.e. forking the if-elses).
+3. We provide several default model names in [config.py](unifold/config.py), namely `model_1`, `model_2`, `model_2_ft` etc. for monomer models and `multimer`, `multimer_ft` etc. for multimer models. Check `model_config()` function for the differences between model names. You may also personalize your own model by modifying the function (i.e. forking the if-elses).
 
 
 ### Finetuning
@@ -182,7 +212,7 @@ bash finetune_monomer.sh \              # finetune_multimer.sh for multimer
     /path/to/training/data/directory/ \ # dataset directory
     /path/to/output/directory/ \        # output directory where parameters are stored
     /path/to/pretrained/parameters.pt \ # pretrained parameters
-    model_2_af2                         # model name
+    model_2_ft                          # model name
 ```
 
 Besides the notices in the previous section, additionaly note that:
@@ -195,7 +225,7 @@ Besides the notices in the previous section, additionaly note that:
 To run UF-Symmetry, please first install the newest version of Uni-Fold, and download the parameters of UF-Symmetry:
 
 ```bash
-wget https://uni-fold.dp.tech/uf_symmetry_params_2022-09-06.tar.gz
+wget https://github.com/dptech-corp/Uni-Fold/releases/download/v2.2.0/uf_symmetry_params_2022-09-06.tar.gz
 tar -zxf uf_symmetry_params_2022-09-06.tar.gz
 ```
 
