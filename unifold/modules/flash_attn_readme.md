@@ -53,8 +53,3 @@ Attention Bias
 ```
 
 If you need more different shape size support, any contribution or discussion is welcome. 
-
-
-Notice
-------------
-Be careful the the odd length of attention mask and attention bias is not support now due to the instruction, we will support in the later.
