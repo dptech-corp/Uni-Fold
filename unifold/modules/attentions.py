@@ -11,7 +11,12 @@ from unicore.modules import (
     LayerNorm,
 )
 
-from .flash_attention import _flash_attn
+try:
+    from .flash_attention import _flash_attn
+    HAS_FlashAttn = True
+except:
+    print("flash_attention is not installed corrected")
+    HAS_FlashAttn = False
 
 
 def gen_attn_mask(mask, neg_inf):
@@ -70,7 +75,7 @@ class Attention(nn.Module):
         k = self.linear_k(k)
         v = self.linear_v(v)
 
-        if self.use_flash_attn and self.head_dim in (16, 32, 64, 128) \
+        if self.use_flash_attn and self.head_dim in (16, 32, 64, 128) and HAS_FlashAttn\
             and q.shape == k.shape:
             # flash update
             q = q.view(q.shape[:-1] + (self.num_heads, -1))
