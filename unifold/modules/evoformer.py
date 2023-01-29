@@ -60,7 +60,6 @@ class EvoformerIteration(nn.Module):
         )
 
         if _is_extra_msa_stack:
-            # TODO: 
             self.msa_att_col = MSAColumnGlobalAttention(
                 d_in=d_msa,
                 d_hid=d_hid_msa_att,
