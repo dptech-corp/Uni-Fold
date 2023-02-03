@@ -237,6 +237,7 @@ def base_config():
                 "inf": inf,
                 "max_recycling_iters": max_recycling_iters,
                 "alphafold_original_mode": False,
+                "use_flash_attn": False,
             },
             "model": {
                 "is_multimer": is_multimer,

@@ -44,6 +44,7 @@ class EvoformerIteration(nn.Module):
         inf: float,
         eps: float,
         _is_extra_msa_stack: bool = False,
+        use_flash_attn: bool = False,
     ):
         super(EvoformerIteration, self).__init__()
 
@@ -55,6 +56,7 @@ class EvoformerIteration(nn.Module):
             d_pair=d_pair,
             d_hid=d_hid_msa_att,
             num_heads=num_heads_msa,
+            use_flash_attn=use_flash_attn,
         )
 
         if _is_extra_msa_stack:
@@ -70,6 +72,7 @@ class EvoformerIteration(nn.Module):
                 d_msa,
                 d_hid_msa_att,
                 num_heads_msa,
+                use_flash_attn=use_flash_attn,
             )
 
         self.msa_transition = Transition(
@@ -96,11 +99,13 @@ class EvoformerIteration(nn.Module):
             d_pair,
             d_hid_pair_att,
             num_heads_pair,
+            use_flash_attn=use_flash_attn,
         )
         self.tri_att_end = TriangleAttentionEnding(
             d_pair,
             d_hid_pair_att,
             num_heads_pair,
+            use_flash_attn=use_flash_attn,
         )
 
         self.pair_transition = Transition(
@@ -231,6 +236,7 @@ class EvoformerStack(nn.Module):
         inf: float,
         eps: float,
         _is_extra_msa_stack: bool = False,
+        use_flash_attn: bool = False,
         **kwargs,
     ):
         super(EvoformerStack, self).__init__()
@@ -257,6 +263,7 @@ class EvoformerStack(nn.Module):
                     inf=inf,
                     eps=eps,
                     _is_extra_msa_stack=_is_extra_msa_stack,
+                    use_flash_attn=use_flash_attn,
                 )
             )
         if not self._is_extra_msa_stack:
