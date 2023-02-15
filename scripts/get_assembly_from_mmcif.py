@@ -192,6 +192,7 @@ def parse_assembly(mmcif_path):
         for i, j in enumerate(asym_id):
             idxxxx = "1"
             if name in ["6lb3"]:
+                # the first assembly consists of two polydeoxyribonucleotides
                 idxxxx = "2"
             if j == idxxxx:
                 sss = op_idx[i].replace("(", "").replace(")", "").replace("'", "").replace('"', "")
