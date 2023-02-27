@@ -29,12 +29,12 @@ def load_feature_for_one_target(
     config, data_folder, symmetry, seed=0, is_multimer=False, use_uniprot=False
 ):
     if not is_multimer:
-        uniprot_msa_dir = None
+        uniprot_msa_feature_dir = None
         sequence_ids = ["A"]
         if use_uniprot:
-            uniprot_msa_dir = data_folder
+            uniprot_msa_feature_dir = data_folder
     else:
-        uniprot_msa_dir = data_folder
+        uniprot_msa_feature_dir = data_folder
         sequence_ids = open(os.path.join(data_folder, "chains.txt")).readline().split()
     batch, _ = load_and_process_symmetry(
         config=config.data,
@@ -45,8 +45,10 @@ def load_feature_for_one_target(
         is_distillation=False,
         symmetry=symmetry,
         sequence_ids=sequence_ids,
-        monomer_feature_dir=data_folder,
-        uniprot_msa_dir=uniprot_msa_dir,
+        feature_dir=data_folder,
+        msa_feature_dir=data_folder,
+        template_feature_dir=data_folder,
+        uniprot_msa_feature_dir=uniprot_msa_feature_dir,
         is_monomer=(not is_multimer),
     )
     batch = UnifoldDataset.collater([batch])
@@ -64,7 +66,7 @@ def main(args):
         config.data.predict.subsample_templates = True
     # faster prediction with large chunk
     config.globals.chunk_size = 128
-    
+
     model = UFSymmetry(config)
 
     print("start to load params {}".format(args.param_path))
@@ -91,9 +93,9 @@ def main(args):
         name_suffix += "_r" + str(args.max_recycling_iters)
     if args.num_ensembles != 2:
         name_suffix += "_e" + str(args.num_ensembles)
-    
+
     symmetry = args.symmetry
-    if symmetry[0] != 'C':
+    if symmetry[0] != "C":
         raise NotImplementedError(f"symmetry {symmetry} is not supported currently.")
 
     print("start to predict {}".format(args.target_name))
@@ -108,16 +110,13 @@ def main(args):
             use_uniprot=args.use_uniprot,
         )
         seq_len = batch["aatype"].shape[-1]
-        
+
         # faster prediction with large chunk/block size
         chunk_size, block_size = automatic_chunk_size(
-                                    seq_len,
-                                    args.model_device,
-                                    args.bf16
-                                )
+            seq_len, args.model_device, args.bf16
+        )
         model.globals.chunk_size = chunk_size
         model.globals.block_size = block_size
-
 
         with torch.no_grad():
             batch = {
@@ -127,7 +126,7 @@ def main(args):
             shapes = {k: v.shape for k, v in batch.items()}
             print(shapes)
             t = time.perf_counter()
-            raw_out = model(batch, expand=True)     # when expand, output assembly.
+            raw_out = model(batch, expand=True)  # when expand, output assembly.
             print(f"Inference time: {time.perf_counter() - t}")
 
         def to_float(x):
@@ -137,7 +136,7 @@ def main(args):
                 return x
 
         out = raw_out
-        
+
         # Toss out the recycling dimensions --- we don't need them anymore
         batch = tensor_tree_map(lambda t: t[-1, 0, ...], batch)
         batch = tensor_tree_map(to_float, batch)
@@ -151,22 +150,26 @@ def main(args):
             plddt[..., None], residue_constants.atom_type_num, axis=-1
         )
         plddt_b_factors_assembly = np.repeat(
-            plddt_b_factors, batch["symmetry_opers"].shape[0], axis=-2)
-        
+            plddt_b_factors, batch["symmetry_opers"].shape[0], axis=-2
+        )
+
         cur_assembly = assembly_from_prediction(
             result=out, b_factors=plddt_b_factors_assembly
         )
-        cur_save_name = (
-            f"ufsymm_{param_name}_{cur_seed}{name_suffix}"
-        )
-        with open(os.path.join(output_dir, cur_save_name + '.pdb'), "w") as f:
+        cur_save_name = f"ufsymm_{param_name}_{cur_seed}{name_suffix}"
+        with open(os.path.join(output_dir, cur_save_name + ".pdb"), "w") as f:
             f.write(protein.to_pdb(cur_assembly))
         if args.save_raw_output:
             out = {
-                k: v for k, v in out.items()
-                if k.startswith("final_") or k.startswith("expand_final_") or k == "plddt"
+                k: v
+                for k, v in out.items()
+                if k.startswith("final_")
+                or k.startswith("expand_final_")
+                or k == "plddt"
             }
-            with gzip.open(os.path.join(output_dir, cur_save_name + '_outputs.pkl.gz'), 'wb') as f:
+            with gzip.open(
+                os.path.join(output_dir, cur_save_name + "_outputs.pkl.gz"), "wb"
+            ) as f:
                 pickle.dump(out, f)
         del out
 

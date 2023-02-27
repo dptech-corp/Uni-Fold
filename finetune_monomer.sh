@@ -54,6 +54,6 @@ python -m torch.distributed.launch --nproc_per_node=$n_gpu --master_port $MASTER
        --update-freq $update_freq --seed $seed  --tensorboard-logdir $2/tsb/ \
        --max-update $total_step --max-epoch 1 --log-interval 10 --log-format simple \
        --save-interval-updates 500 --validate-interval-updates 500 --keep-interval-updates 40 --no-epoch-checkpoints  \
-       --save-dir $2 --tmp-save-dir $tmp_dir --required-batch-size-multiple 1 --bf16 --ema-decay 0.999 --data-buffer-size 32 --bf16-sr --model-name $model_name $OPTION
+       --save-dir $2 --tmp-save-dir $tmp_dir --required-batch-size-multiple 1 --bf16 --ema-decay 0.999 --data-buffer-size 32 --bf16-sr --model-name $model_name $OPTION --fixed-validation-seed 38
 
 rm -rf $tmp_dir

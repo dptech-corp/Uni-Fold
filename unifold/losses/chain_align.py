@@ -179,7 +179,7 @@ def merge_labels(batch, per_asym_residue_index, labels, align):
     labels: list of label dicts, each with shape [nk, *]
     align: list of int, such as [2, None, 0, 1], each entry specify the corresponding label of the asym.
     """
-    num_res = batch["msa_mask"].shape[-1]
+    num_res = batch["target_feat"].shape[-2]
     outs = {}
     for k, v in labels[0].items():
         if k in [

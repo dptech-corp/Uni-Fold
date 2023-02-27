@@ -37,10 +37,6 @@ class AlphafoldModel(BaseUnicoreModel):
     def bfloat16(self):
         self.model = self.model.bfloat16()
         return self
-    
-    def float(self):
-        self.model = self.model.float()
-        return self
 
     @classmethod
     def build_model(cls, args, task):

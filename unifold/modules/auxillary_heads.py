@@ -43,8 +43,9 @@ class AuxiliaryHeads(nn.Module):
         distogram_logits = self.distogram(outputs["pair"])
         aux_out["distogram_logits"] = distogram_logits
 
-        masked_msa_logits = self.masked_msa(outputs["msa"])
-        aux_out["masked_msa_logits"] = masked_msa_logits
+        if self.masked_msa is not None:
+            masked_msa_logits = self.masked_msa(outputs["msa"])
+            aux_out["masked_msa_logits"] = masked_msa_logits
 
         if self.config.experimentally_resolved.enabled:
             exp_res_logits = self.experimentally_resolved(outputs["single"])

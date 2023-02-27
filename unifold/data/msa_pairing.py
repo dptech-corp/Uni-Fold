@@ -60,6 +60,10 @@ SEQ_FEATURES = (
     "rigid_group_default_frame",
     # zy
     "num_sym",
+    "input_atom_positions",
+    "input_atom_mask",
+    "input_rigidgroups_gt_frames",
+    "input_rigidgroups_gt_exists",
 )
 TEMPLATE_FEATURES = (
     "template_aatype",
