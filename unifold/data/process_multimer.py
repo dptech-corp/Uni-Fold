@@ -59,6 +59,8 @@ REQUIRED_FEATURES = frozenset(
         "template_sum_probs",
         "num_sym",
         "msa_chains",
+        "input_atom_positions",
+        "input_atom_mask",
     }
 )
 
@@ -277,7 +279,10 @@ def empty_template_feats(n_res):
 
 def convert_monomer_features(monomer_features: FeatureDict) -> FeatureDict:
     """Reshapes and modifies monomer features for multimer models."""
-    if monomer_features["template_aatype"].shape[0] == 0:
+    if (
+        "template_aatype" not in monomer_features
+        or monomer_features["template_aatype"].shape[0] == 0
+    ):
         monomer_features.update(
             empty_template_feats(monomer_features["aatype"].shape[0])
         )

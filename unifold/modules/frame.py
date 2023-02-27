@@ -537,3 +537,25 @@ class Quaternion:
 
     def stop_rot_gradient(self) -> Quaternion:
         return Quaternion(self._q.detach(), self._t)
+
+
+def rot_to_quat(
+    rot: torch.Tensor,
+):
+    if(rot.shape[-2:] != (3, 3)):
+        raise ValueError("Input rotation is incorrectly shaped")
+
+    rot = [[rot[..., i, j] for j in range(3)] for i in range(3)]
+    [[xx, xy, xz], [yx, yy, yz], [zx, zy, zz]] = rot 
+
+    k = [
+        [ xx + yy + zz,      zy - yz,      xz - zx,      yx - xy,],
+        [      zy - yz, xx - yy - zz,      xy + yx,      xz + zx,],
+        [      xz - zx,      xy + yx, yy - xx - zz,      yz + zy,],
+        [      yx - xy,      xz + zx,      yz + zy, zz - xx - yy,]
+    ]
+
+    k = (1./3.) * torch.stack([torch.stack(t, dim=-1) for t in k], dim=-2)
+
+    _, vectors = torch.linalg.eigh(k)
+    return vectors[..., -1]

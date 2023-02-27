@@ -158,7 +158,7 @@ def parse_stockholm(stockholm_string: str) -> Msa:
     )
 
 
-def parse_a3m(a3m_string: str) -> Msa:
+def parse_a3m(a3m_string: str, fast: bool = True) -> Msa:
     """Parses sequences and deletion matrix from a3m format alignment.
 
     Args:
@@ -174,6 +174,8 @@ def parse_a3m(a3m_string: str) -> Msa:
                 the aligned sequence i at residue position j.
             * A list of descriptions, one per sequence, from the a3m file.
     """
+    if fast:
+        return parse_a3m_fast(a3m_string)
     sequences, descriptions = parse_fasta(a3m_string)
     deletion_matrix = []
     for msa_sequence in sequences:
@@ -196,6 +198,42 @@ def parse_a3m(a3m_string: str) -> Msa:
         descriptions=descriptions,
     )
 
+src_table = string.ascii_uppercase + "-"
+dest_table = "".join([','] * len(src_table))
+
+map_trans = str.maketrans(src_table, dest_table)
+deletion_table = str.maketrans("", "", string.ascii_lowercase)
+
+def parse_a3m_fast(a3m_string: str) -> Msa:
+    """Parses sequences and deletion matrix from a3m format alignment.
+
+    Args:
+        a3m_string: The string contents of a a3m file. The first sequence in the
+            file should be the query sequence.
+
+    Returns:
+        A tuple of:
+            * A list of sequences that have been aligned to the query. These
+                might contain duplicates.
+            * The deletion matrix for the alignment as a list of lists. The element
+                at `deletion_matrix[i][j]` is the number of residues deleted from
+                the aligned sequence i at residue position j.
+            * A list of descriptions, one per sequence, from the a3m file.
+    """
+    sequences, descriptions = parse_fasta(a3m_string)
+
+    aligned_sequences = [s.translate(deletion_table) for s in sequences]
+    
+    comma_seqs = [s.translate(map_trans) for s in sequences]
+    deletion_matrix = [
+        [len(x) for x in s.split(",")] for s in comma_seqs
+    ]
+
+    return Msa(
+        sequences=aligned_sequences,
+        deletion_matrix=deletion_matrix,
+        descriptions=descriptions,
+    )
 
 def _convert_sto_seq_to_a3m(
     query_non_gaps: Sequence[bool], sto_seq: str

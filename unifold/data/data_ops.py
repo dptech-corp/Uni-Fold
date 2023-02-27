@@ -615,10 +615,10 @@ def make_fixed_size(
     num_templates=0,
 ):
     """Guess at the MSA and sequence dimension to make fixed size."""
+
     def get_pad_size(cur_size, multiplier=4):
-        return  max(multiplier, 
-                ((cur_size + multiplier - 1) // multiplier) * multiplier
-            )
+        return max(multiplier, ((cur_size + multiplier - 1) // multiplier) * multiplier)
+
     if num_res is not None:
         input_num_res = (
             protein["aatype"].shape[0]
@@ -863,12 +863,12 @@ def make_atom14_positions(protein):
     return protein
 
 
-def atom37_to_frames(protein, eps=1e-8):
-    # TODO: extract common part and put them into residue constants.
-    aatype = protein["aatype"]
-    all_atom_positions = protein["all_atom_positions"]
-    all_atom_mask = protein["all_atom_mask"]
-
+def generate_frames(
+    aatype,
+    all_atom_positions,
+    all_atom_mask,
+    eps,
+):
     batch_dims = len(aatype.shape[:-1])
 
     restype_rigidgroup_base_atom_names = np.full([21, 8, 3], "", dtype=object)
@@ -984,14 +984,40 @@ def atom37_to_frames(protein, eps=1e-8):
     gt_frames_tensor = gt_frames.to_tensor_4x4()
     alt_gt_frames_tensor = alt_gt_frames.to_tensor_4x4()
 
-    protein["rigidgroups_gt_frames"] = gt_frames_tensor
-    protein["rigidgroups_gt_exists"] = gt_exists
-    protein["rigidgroups_group_exists"] = group_exists
-    protein["rigidgroups_group_is_ambiguous"] = residx_rigidgroup_is_ambiguous
-    protein["rigidgroups_alt_gt_frames"] = alt_gt_frames_tensor
+    res = {}
+    res["rigidgroups_gt_frames"] = gt_frames_tensor
+    res["rigidgroups_gt_exists"] = gt_exists
+    res["rigidgroups_group_exists"] = group_exists
+    res["rigidgroups_group_is_ambiguous"] = residx_rigidgroup_is_ambiguous
+    res["rigidgroups_alt_gt_frames"] = alt_gt_frames_tensor
 
+    return res
+
+
+def atom37_to_frames(protein, eps=1e-8):
+    # TODO: extract common part and put them into residue constants.
+    protein.update(
+        generate_frames(
+            protein["aatype"],
+            protein["all_atom_positions"],
+            protein["all_atom_mask"],
+            eps,
+        )
+    )
     return protein
 
+@curry1
+def input_atom37_to_frames(protein, eps=1e-8):
+    # TODO: extract common part and put them into residue constants.
+    assert "input_atom_positions" in protein, "must provide structure for refinement tasks."
+    ret = generate_frames(
+        protein["aatype"], protein["input_atom_positions"], protein["input_atom_mask"], eps
+    )
+    protein.update(
+        {"input_"+k : v for k, v in ret.items()}
+    )
+
+    return protein
 
 @curry1
 def atom37_to_torsion_angles(
@@ -1031,11 +1057,13 @@ def atom37_to_torsion_angles(
     phi_atom_pos = torch.cat(
         [prev_all_atom_positions[..., 2:3, :], all_atom_positions[..., :3, :]],
         dim=-2,
-    )
+    )   # C-, N, Ca, C
     psi_atom_pos = torch.cat(
         [all_atom_positions[..., :3, :], all_atom_positions[..., 4:5, :]],
         dim=-2,
-    )
+    )   # N, Ca, C, O. 
+        # Note: this is tested equivalent to N Ca C N+ angle, however,
+        # the last psi of the sequence can be inaccurate.
 
     pre_omega_mask = torch.prod(prev_all_atom_mask[..., 1:3], dim=-1) * torch.prod(
         all_atom_mask[..., :2], dim=-1
@@ -1269,38 +1297,22 @@ def get_crop_sizes_each_chain(
     asym_len: torch.Tensor,
     crop_size: int,
     random_seed: Optional[int] = None,
-    use_multinomial: bool = False,
 ) -> torch.Tensor:
     """get crop sizes for contiguous crop"""
-    if not use_multinomial:
-        with data_utils.numpy_seed(random_seed, key="multimer_contiguous_perm"):
-            shuffle_idx = np.random.permutation(len(asym_len))
-        num_left = asym_len.sum()
-        num_budget = torch.tensor(crop_size)
-        crop_sizes = [0 for _ in asym_len]
-        for j, idx in enumerate(shuffle_idx):
-            this_len = asym_len[idx]
-            num_left -= this_len
-            # num res at most we can keep in this ent
-            max_size = min(num_budget, this_len)
-            # num res at least we shall keep in this ent
-            min_size = min(this_len, max(0, num_budget - num_left))
-            with data_utils.numpy_seed(
-                random_seed, j, key="multimer_contiguous_crop_size"
-            ):
-                this_crop_size = int(
-                    np.random.randint(low=int(min_size), high=int(max_size) + 1)
-                )
-            num_budget -= this_crop_size
-            crop_sizes[idx] = this_crop_size
-        crop_sizes = torch.tensor(crop_sizes)
-    else:  # use multinomial
-        # TODO: better multimer
-        entity_probs = asym_len / torch.sum(asym_len)
-        crop_sizes = torch.from_numpy(
-            np.random.multinomial(crop_size, pvals=entity_probs)
+    total_len = asym_len.sum()
+    num_budget = crop_size
+    asym_ids = np.zeros(total_len)
+    offset = 0
+    for i, seq_len in enumerate(asym_len):
+        asym_ids[offset : offset + seq_len] = i
+        offset += seq_len
+    with data_utils.numpy_seed(random_seed, key="multimer_contiguous_crop_size_len"):
+        sampled_asym_ids = np.random.choice(
+            asym_ids, size=int(num_budget), replace=False
         )
-        crop_sizes = torch.min(crop_sizes, asym_len)
+    crop_sizes = torch.zeros_like(asym_len).long()
+    for i in range(len(asym_len)):
+        crop_sizes[i] = (sampled_asym_ids == i).sum()
     return crop_sizes
 
 
@@ -1308,7 +1320,6 @@ def get_contiguous_crop_idx(
     protein: NumpyDict,
     crop_size: int,
     random_seed: Optional[int] = None,
-    use_multinomial: bool = False,
 ) -> torch.Tensor:
 
     num_res = protein["aatype"].shape[0]
@@ -1318,9 +1329,7 @@ def get_contiguous_crop_idx(
     assert "asym_len" in protein
     asym_len = protein["asym_len"]
 
-    crop_sizes = get_crop_sizes_each_chain(
-        asym_len, crop_size, random_seed, use_multinomial
-    )
+    crop_sizes = get_crop_sizes_each_chain(asym_len, crop_size, random_seed)
     crop_idxs = []
     asym_offset = torch.tensor(0, dtype=torch.int64)
     with data_utils.numpy_seed(random_seed, key="multimer_contiguous_crop_start_idx"):

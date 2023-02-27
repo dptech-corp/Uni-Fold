@@ -109,7 +109,7 @@ ENV/
 # VSCODE
 .vscode/ftp-sync.json
 .vscode/settings.json
-
+.vscode/
 # pytest
 .pytest_cache
 test/

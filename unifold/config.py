@@ -21,6 +21,7 @@ eps = mlc.FieldReference(1e-8, field_type=float)
 inf = mlc.FieldReference(3e4, field_type=float)
 use_templates = mlc.FieldReference(True, field_type=bool)
 is_multimer = mlc.FieldReference(False, field_type=bool)
+is_single = mlc.FieldReference(False, field_type=bool)
 
 
 def base_config():
@@ -56,6 +57,7 @@ def base_config():
                         "msa_chains": [N_MSA, None],
                         "msa_row_mask": [N_MSA],
                         "num_recycling_iters": [],
+                        "num_ensembles": [],
                         "pseudo_beta": [N_RES, None],
                         "pseudo_beta_mask": [N_RES],
                         "residue_index": [N_RES],
@@ -94,8 +96,11 @@ def base_config():
                         "sym_id": [N_RES],
                         "entity_id": [N_RES],
                         "num_sym": [N_RES],
+                        "token": [N_RES, None, None],
                         "asym_len": [None],
                         "cluster_bias_mask": [N_MSA],
+                        "input_atom_positions": [N_RES, None, None],
+                        "input_atom_mask": [N_RES, None],
                     },
                     "masked_msa": {
                         "profile_prob": 0.1,
@@ -111,12 +116,14 @@ def base_config():
                     "random_delete_msa": {
                         "max_msa_entry": 1 << 25,  # := 33554432
                     },
+                    "structure_refine": False,
                     "v2_feature": False,
                     "gumbel_sample": False,
                     "max_extra_msa": 1024,
                     "msa_cluster_features": True,
                     "reduce_msa_clusters_by_max_templates": True,
                     "resample_msa_in_recycling": True,
+                    "train_max_date": "2022-04-30",
                     "template_features": [
                         "template_all_atom_positions",
                         "template_sum_probs",
@@ -133,7 +140,11 @@ def base_config():
                         "between_segment_residues",
                         "deletion_matrix",
                         "num_recycling_iters",
+                        "num_ensembles",
+                        "token",
                         "crop_and_fix_size_seed",
+                        "input_atom_positions",
+                        "input_atom_mask",
                     ],
                     "recycling_features": [
                         "msa_chains",
@@ -160,6 +171,8 @@ def base_config():
                     ],
                     "use_templates": use_templates,
                     "is_multimer": is_multimer,
+                    "is_single": is_single,
+                    "feature_src": "",
                     "use_template_torsion_angles": use_templates,
                     "max_recycling_iters": max_recycling_iters,
                 },
@@ -197,8 +210,8 @@ def base_config():
                     "max_msa_clusters": 128,
                     "max_templates": 4,
                     "num_ensembles": 1,
-                    "crop": False,
-                    "crop_size": None,
+                    "crop": True,
+                    "crop_size": 384,
                     "spatial_crop_prob": 0.5,
                     "ca_ca_threshold": 10.0,
                     "supervised": True,
@@ -240,6 +253,7 @@ def base_config():
             },
             "model": {
                 "is_multimer": is_multimer,
+                "is_single": is_single,
                 "input_embedder": {
                     "tf_dim": 22,
                     "msa_dim": 49,
@@ -255,6 +269,13 @@ def base_config():
                     "max_bin": 20.75,
                     "num_bins": 15,
                     "inf": 1e8,
+                },
+                "esm2_embedder": {
+                    "token_dim": 2560,
+                    "d_pair": d_pair,
+                    "d_msa": d_msa,
+                    "dropout": 0.1,
+                    "esm2_disable": False
                 },
                 "template": {
                     "distogram": {
@@ -551,12 +572,28 @@ def model_config(name, train=False):
         c.globals.alphafold_original_mode = True
     elif name == "model_2_v2":
         c = model_2_v2(c)
+    elif name == "model_1_v2_ft":
+        c = model_2_v2(c)
+        recursive_set(c, "max_extra_msa", 5120)
+        recursive_set(c, "max_msa_clusters", 512)
+        c.data.train.crop_size = 384
+        c.loss.violation.weight = 0.02
     elif name == "model_2_v2_ft":
         c = model_2_v2(c)
         recursive_set(c, "max_extra_msa", 1024)
         recursive_set(c, "max_msa_clusters", 512)
         c.data.train.crop_size = 384
         c.loss.violation.weight = 0.02
+    elif name == "model_3_v2_ft" or name == "model_4_v2_ft":
+        c = model_2_v2(c)
+        recursive_set(c, "max_extra_msa", 5120)
+        recursive_set(c, "max_msa_clusters", 512)
+        c.data.train.crop_size = 384
+        c.loss.violation.weight = 0.02
+        c.model.template.enabled = False
+        c.model.template.embed_angles = False
+        recursive_set(c, "use_templates", False)
+        recursive_set(c, "use_template_torsion_angles", False)
     elif name == "model_3_af2" or name == "model_4_af2":
         recursive_set(c, "max_extra_msa", 5120)
         recursive_set(c, "max_msa_clusters", 512)
@@ -566,6 +603,16 @@ def model_config(name, train=False):
         c.model.heads.experimentally_resolved.enabled = True
         c.loss.experimentally_resolved.weight = 0.01
         c.globals.alphafold_original_mode = True
+        c.model.template.enabled = False
+        c.model.template.embed_angles = False
+        recursive_set(c, "use_templates", False)
+        recursive_set(c, "use_template_torsion_angles", False)
+    elif name == "model_5_v2_ft":
+        c = model_2_v2(c)
+        recursive_set(c, "max_extra_msa", 1024)
+        recursive_set(c, "max_msa_clusters", 512)
+        c.data.train.crop_size = 384
+        c.loss.violation.weight = 0.02
         c.model.template.enabled = False
         c.model.template.embed_angles = False
         recursive_set(c, "use_templates", False)
@@ -590,6 +637,123 @@ def model_config(name, train=False):
         recursive_set(c, "max_extra_msa", 1152)
         recursive_set(c, "max_msa_clusters", 256)
         c.data.train.crop_size = 384
+        c.loss.violation.weight = 0.5
+    elif name == "single_multimer":
+        c = multimer(c)
+        recursive_set(c, "is_single", True)
+        recursive_set(c, "d_msa", 1024)
+        recursive_set(c, "d_single", 1024)
+        recursive_set(c, "num_heads_msa", 32)
+        recursive_set(c, "num_heads_ipa", 32)
+        c.model.template.enabled = False
+        c.model.template.embed_angles = False
+        c.model.extra_msa.enabled = False
+        recursive_set(c, "use_templates", False)
+        recursive_set(c, "use_template_torsion_angles", False)
+        c.loss.masked_msa.weight = 0.0
+        c.loss.repr_norm.weight = 0.0
+        c.model.heads.pae.disable_enhance_head = False
+    elif name == "single_multimer_3b":
+        c = multimer(c)
+        recursive_set(c, "is_single", True)
+        recursive_set(c, "d_msa", 1024)
+        recursive_set(c, "d_single", 1024)
+        recursive_set(c, "num_heads_msa", 32)
+        recursive_set(c, "num_heads_ipa", 32)
+        c.model.template.enabled = False
+        c.model.template.embed_angles = False
+        c.model.extra_msa.enabled = False
+        recursive_set(c, "use_templates", False)
+        recursive_set(c, "use_template_torsion_angles", False)
+        c.loss.masked_msa.weight = 0.0
+        c.loss.repr_norm.weight = 0.0
+        c.model.heads.pae.disable_enhance_head = False
+        recursive_set(c, "feature_src", "3b")
+        c.model.esm2_embedder.token_dim = 2560
+    elif name == "single_multimer_3b_newemb":
+        c = multimer(c)
+        recursive_set(c, "is_single", True)
+        recursive_set(c, "d_msa", 1024)
+        recursive_set(c, "d_single", 1024)
+        recursive_set(c, "num_heads_msa", 32)
+        recursive_set(c, "num_heads_ipa", 32)
+        c.model.template.enabled = False
+        c.model.template.embed_angles = False
+        c.model.extra_msa.enabled = False
+        recursive_set(c, "use_templates", False)
+        recursive_set(c, "use_template_torsion_angles", False)
+        c.loss.masked_msa.weight = 0.0
+        c.loss.repr_norm.weight = 0.0
+        c.model.heads.pae.disable_enhance_head = False
+        recursive_set(c, "feature_src", "3b_newemb")
+        c.model.esm2_embedder.token_dim = 2560
+    elif name == "single_multimer_disable":
+        c = multimer(c)
+        recursive_set(c, "is_single", True)
+        recursive_set(c, "d_msa", 1024)
+        recursive_set(c, "d_single", 1024)
+        recursive_set(c, "num_heads_msa", 32)
+        recursive_set(c, "num_heads_ipa", 32)
+        c.model.template.enabled = False
+        c.model.template.embed_angles = False
+        c.model.extra_msa.enabled = False
+        recursive_set(c, "use_templates", False)
+        recursive_set(c, "use_template_torsion_angles", False)
+        c.loss.masked_msa.weight = 0.0
+        c.loss.repr_norm.weight = 0.0
+        c.model.heads.pae.disable_enhance_head = False
+        recursive_set(c, "feature_src", "3b_newemb")
+        c.model.esm2_embedder.token_dim = 2560
+        recursive_set(c, "esm2_disable", True) 
+    elif name == "single_multimer_15b":
+        c = multimer(c)
+        recursive_set(c, "is_single", True)
+        recursive_set(c, "d_msa", 1024)
+        recursive_set(c, "d_single", 1024)
+        recursive_set(c, "num_heads_msa", 32)
+        recursive_set(c, "num_heads_ipa", 32)
+        c.model.template.enabled = False
+        c.model.template.embed_angles = False
+        c.model.extra_msa.enabled = False
+        recursive_set(c, "use_templates", False)
+        recursive_set(c, "use_template_torsion_angles", False)
+        c.loss.masked_msa.weight = 0.0
+        c.loss.repr_norm.weight = 0.0
+        c.model.heads.pae.disable_enhance_head = False
+        recursive_set(c, "feature_src", "15b")
+        c.model.esm2_embedder.token_dim = 5120
+    elif name == "single_multimer_3bft":
+        c = multimer(c)
+        recursive_set(c, "is_single", True)
+        recursive_set(c, "d_msa", 1024)
+        recursive_set(c, "d_single", 1024)
+        recursive_set(c, "num_heads_msa", 32)
+        recursive_set(c, "num_heads_ipa", 32)
+        c.model.template.enabled = False
+        c.model.template.embed_angles = False
+        c.model.extra_msa.enabled = False
+        recursive_set(c, "use_templates", False)
+        recursive_set(c, "use_template_torsion_angles", False)
+        c.loss.masked_msa.weight = 0.0
+        c.loss.repr_norm.weight = 0.0
+        c.model.heads.pae.disable_enhance_head = False
+        recursive_set(c, "feature_src", "3bft")
+        c.model.esm2_embedder.token_dim = 2560
+    elif name == "single_multimer_ft":
+        c = multimer(c)
+        recursive_set(c, "is_single", True)
+        recursive_set(c, "d_msa", 1024)
+        recursive_set(c, "d_single", 1024)
+        recursive_set(c, "num_heads_msa", 32)
+        recursive_set(c, "num_heads_ipa", 32)
+        c.model.template.enabled = False
+        c.model.template.embed_angles = False
+        c.model.extra_msa.enabled = False
+        recursive_set(c, "use_templates", False)
+        recursive_set(c, "use_template_torsion_angles", False)
+        c.loss.masked_msa.weight = 0.0
+        c.loss.repr_norm.weight = 0.0
+        c.model.heads.pae.disable_enhance_head = False
         c.loss.violation.weight = 0.5
     elif name == "multimer_af2":
         recursive_set(c, "max_extra_msa", 1152)

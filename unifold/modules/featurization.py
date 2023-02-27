@@ -118,10 +118,16 @@ def build_template_pair_feat(
     )
 
     to_concat.append(template_mask_2d.new_zeros(*template_mask_2d.shape, 3))
-    to_concat.append(template_mask_2d[..., None])
+
+    n, ca, c = [rc.atom_order[a] for a in ["N", "CA", "C"]]
+    t_aa_masks = batch["template_all_atom_mask"]
+    backbone_mask = t_aa_masks[..., n] * t_aa_masks[..., ca] * t_aa_masks[..., c]
+    backbone_mask_2d = backbone_mask[..., :, None] * backbone_mask[..., None, :]
+
+    to_concat.append(backbone_mask_2d[..., None])
 
     act = torch.cat(to_concat, dim=-1)
-    act = act * template_mask_2d[..., None]
+    act = act * backbone_mask_2d[..., None]
 
     return act
 
