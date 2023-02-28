@@ -21,7 +21,7 @@ eps = mlc.FieldReference(1e-8, field_type=float)
 inf = mlc.FieldReference(3e4, field_type=float)
 use_templates = mlc.FieldReference(True, field_type=bool)
 is_multimer = mlc.FieldReference(False, field_type=bool)
-is_single = mlc.FieldReference(False, field_type=bool)
+use_musse = mlc.FieldReference(False, field_type=bool)
 
 
 def base_config():
@@ -166,8 +166,7 @@ def base_config():
                     ],
                     "use_templates": use_templates,
                     "is_multimer": is_multimer,
-                    "is_single": is_single,
-                    "feature_src": "",
+                    "use_musse": use_musse,
                     "use_template_torsion_angles": use_templates,
                     "max_recycling_iters": max_recycling_iters,
                 },
@@ -205,8 +204,8 @@ def base_config():
                     "max_msa_clusters": 128,
                     "max_templates": 4,
                     "num_ensembles": 1,
-                    "crop": True,
-                    "crop_size": 384,
+                    "crop": False,
+                    "crop_size": None,
                     "spatial_crop_prob": 0.5,
                     "ca_ca_threshold": 10.0,
                     "supervised": True,
@@ -248,7 +247,7 @@ def base_config():
             },
             "model": {
                 "is_multimer": is_multimer,
-                "is_single": is_single,
+                "use_musse": use_musse,
                 "input_embedder": {
                     "tf_dim": 22,
                     "msa_dim": 49,
@@ -270,7 +269,6 @@ def base_config():
                     "d_pair": d_pair,
                     "d_msa": d_msa,
                     "dropout": 0.1,
-                    "esm2_disable": False
                 },
                 "template": {
                     "distogram": {
@@ -607,9 +605,9 @@ def model_config(name, train=False):
         recursive_set(c, "max_msa_clusters", 256)
         c.data.train.crop_size = 384
         c.loss.violation.weight = 0.5
-    elif name == "single_multimer_3b_newemb":
+    elif name == "unifold_musse":
         c = multimer(c)
-        recursive_set(c, "is_single", True)
+        recursive_set(c, "use_musse", True)
         recursive_set(c, "d_msa", 1024)
         recursive_set(c, "d_single", 1024)
         recursive_set(c, "num_heads_msa", 32)
@@ -622,7 +620,6 @@ def model_config(name, train=False):
         c.loss.masked_msa.weight = 0.0
         c.loss.repr_norm.weight = 0.0
         c.model.heads.pae.disable_enhance_head = False
-        recursive_set(c, "feature_src", "3b_newemb")
         c.model.esm2_embedder.token_dim = 2560
     elif name == "multimer_af2":
         recursive_set(c, "max_extra_msa", 1152)

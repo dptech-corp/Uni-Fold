@@ -50,8 +50,7 @@ def nonensembled_fns(common_cfg, mode_cfg):
 
     operators.append(data_ops.make_atom14_masks)
     operators.append(data_ops.make_target_feat)
-    if common_cfg.structure_refine:
-        operators.append(data_ops.input_atom37_to_frames())
+   
 
     return operators
 

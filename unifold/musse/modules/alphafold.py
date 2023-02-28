@@ -4,7 +4,7 @@ from .evoformer import EvoformerStackSingle
 from .auxiliary_heads import AuxiliaryHeadsSingle
 
 
-class AlphaFoldSingle(AlphaFold):
+class AlphaFoldMusse(AlphaFold):
     def __init__(self, config):
         super().__init__(config)
         config = config.model

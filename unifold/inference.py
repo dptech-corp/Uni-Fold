@@ -11,10 +11,10 @@ import json
 import pickle
 from unifold.config import model_config
 from unifold.modules.alphafold import AlphaFold
-from unifold.ssmultimer.modules.alphafold import AlphaFoldSingle
+from unifold.musse.modules.alphafold import AlphaFoldMusse
 from unifold.data import residue_constants, protein
-from unifold.dataset import load_and_process, UnifoldDataset
-from unifold.ssmultimer.dataset import load_and_process as load_and_process_ss
+from unifold.dataset import UnifoldDataset
+from unifold.musse.dataset import load_and_process
 from unicore.utils import (
     tensor_tree_map,
 )
@@ -63,7 +63,7 @@ def load_feature_for_one_target(
     else:
         uniprot_msa_feature_dir = data_folder
         sequence_ids = open(os.path.join(data_folder, "chains.txt")).readline().split()
-    batch, _ = load_and_process_ss(
+    batch, _ = load_and_process(
         config=config.data,
         mode="predict",
         seed=seed,
@@ -91,7 +91,7 @@ def main(args):
     if args.sample_templates:
         # enable template samples for diversity
         config.data.predict.subsample_templates = True
-    model = AlphaFold(config) if not config.data.common.is_single else AlphaFoldSingle(config)
+    model = AlphaFold(config) if not config.data.common.use_musse else AlphaFoldMusse(config)
 
     print("start to load params {}".format(args.param_path))
     state_dict = torch.load(args.param_path)["ema"]["params"]

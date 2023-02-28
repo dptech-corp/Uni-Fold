@@ -7,7 +7,7 @@ from typing import Optional
 import numpy as np
 
 from unifold.dataset import UnifoldDataset, UnifoldMultimerDataset
-from unifold.ssmultimer import UnifoldSingleMultimerDataset
+from unifold.musse import UnifoldSingleMultimerDataset
 from unicore.data import data_utils
 from unicore.tasks import UnicoreTask, register_task
 
@@ -55,7 +55,7 @@ class AlphafoldTask(UnicoreTask):
             split (str): name of the split (e.g., train, valid, test)
         """
         if self.config.model.is_multimer:
-            if self.config.data.common.is_single:
+            if self.config.data.common.use_musse:
                 data_class = UnifoldSingleMultimerDataset
             else:
                 data_class = UnifoldMultimerDataset

@@ -20,20 +20,10 @@ def load_emb(
         np.int32
     )
     chain_feature["sequence"] = monomer_feature["sequence"]
-    # monomer_feature = utils.load_pickle(
-    #     os.path.join(emb_dir, f"{sequence_id}.esm2_emb.pkl.gz")
-    # )
-    # token = monomer_feature["token"]
-    # chain_feature["token"] = token
-    # chain_feature["pair"] = np.transpose(monomer_feature["pair"], [1, 2, 0])
+    
     chain_feature["seq_length"] = np.array([len(chain_feature["aatype"])])
     chain_feature["residue_index"] = np.arange(0, len(chain_feature["aatype"]))
-    # assert (
-    #     chain_feature["pair"].shape[0]
-    #     == chain_feature["pair"].shape[1]
-    #     == chain_feature["token"].shape[0]
-    #     == chain_feature["aatype"].shape[0]
-    # )
+   
     return chain_feature
 
 
@@ -45,17 +35,7 @@ def merge_multi_emb(all_chain_features):
             merge_features[key] = np.concatenate(
                 [x[key] for x in all_chain_features], axis=0
             )
-    # total_length = sum(x["aatype"].shape[0] for x in all_chain_features)
-    # pair = dok_matrix(
-    #     (total_length, total_length, all_chain_features[0]["pair"].shape[-1]),
-    #     dtype=all_chain_features[0]["pair"].dtype,
-    # )
-    # offset = 0
-    # for x in all_chain_features:
-    #     cur_len = x["aatype"].shape[0]
-    #     pair[offset : offset + cur_len, offset : offset + cur_len, :] = x["pair"]
-    #     offset += cur_len
-    # merge_features["pair"] = pair
+   
     merge_features["seq_length"] = np.asarray(
         merge_features["aatype"].shape[0], dtype=np.int32
     )

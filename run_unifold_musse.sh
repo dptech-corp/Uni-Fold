@@ -20,7 +20,7 @@ echo "Starting prediction..."
 fasta_file=$(basename $fasta_path)
 target_name=${fasta_file%.fa*}
 python unifold/inference.py \
-    --model_name=single_multimer_3b_newemb \
+    --model_name=unifold_musse \
     --param_path=$param_path \
     --data_dir=$output_dir_base \
     --target_name=$target_name \

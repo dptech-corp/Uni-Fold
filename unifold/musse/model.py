@@ -1,6 +1,6 @@
 from unicore.models import BaseUnicoreModel, register_model, register_model_architecture
 from unifold.config import model_config
-from .modules.alphafold import AlphaFoldSingle
+from .modules.alphafold import AlphaFoldMusse
 
 
 @register_model("af2_single")
