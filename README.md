@@ -247,13 +247,9 @@ to inference with UF-Symmetry. **Note that the input FASTA file should contain t
 
 ### Installing Uni-Fold MuSSe
 
-Our code is implemented on a distributed PyTorch framework [Uni-Core](https://github.com/dptech-corp/Uni-Core#installation), and for convenience we also provide a Docker image.
-```bash
-docker pull dptechnology/unifold:latest-pytorch1.11.0-cuda11.3
-```
-Then, you can create and attach into the docker container, and clone & install unifold.
+Clone & install unifold.
 ```shell
-git clone --single-branch -b unifold_musse git@github.com:dptech-corp/Uni-Fold.git unifold_musse
+git clone --single-branch -b Musse git@github.com:dptech-corp/Uni-Fold.git unifold_musse
 cd unifold_musse
 pip install -e .
 ```
