@@ -5,3 +5,4 @@ from unicore.utils import (
 )
 
 set_jit_fusion_options()
+from .alphafold import AlphaFold
