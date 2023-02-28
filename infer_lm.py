@@ -17,7 +17,7 @@ from functools import lru_cache
 from unicore.data import Dictionary
 import numpy as np
 import torch
-from plm.model.bert import BertModel
+from unifold.ssmultimer.plm.model.bert import BertModel
 import time
 
 import pickle
@@ -191,7 +191,7 @@ def load_model_ensemble_and_task(
     filename = filenames[0]
     state = torch.load(filename, map_location=torch.device("cpu"))
     args = state["args"]
-    dictionary = Dictionary.load(os.path.join("plm", "dict_esm.txt"))
+    dictionary = Dictionary.load(os.path.join("unifold/ssmultimer/plm", "dict_esm.txt"))
     model = BertModel(args, dictionary)
 
     def upgrade_state_dict(state_dict):
