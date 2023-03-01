@@ -13,8 +13,8 @@ from unifold.config import model_config
 from unifold.modules.alphafold import AlphaFold
 from unifold.musse.modules.alphafold import AlphaFoldMusse
 from unifold.data import residue_constants, protein
-from unifold.dataset import UnifoldDataset
-from unifold.musse.dataset import load_and_process
+from unifold.dataset import load_and_process, UnifoldDataset
+from unifold.musse.dataset import load_and_process as load_and_process_musse
 from unicore.utils import (
     tensor_tree_map,
 )
@@ -55,29 +55,42 @@ def load_feature_for_one_target(
     config, data_folder, seed=0, is_multimer=False, use_uniprot=False
 ):
     if not is_multimer:
-        uniprot_msa_feature_dir = None
-        sequence_ids = ["A"]
+        uniprot_msa_dir = None
+        sequence_ids = open(os.path.join(data_folder, "chains.txt")).readline().split()
         if use_uniprot:
-            uniprot_msa_feature_dir = data_folder
+            uniprot_msa_dir = data_folder
 
     else:
-        uniprot_msa_feature_dir = data_folder
+        uniprot_msa_dir = data_folder
         sequence_ids = open(os.path.join(data_folder, "chains.txt")).readline().split()
-    batch, _ = load_and_process(
-        config=config.data,
-        mode="predict",
-        seed=seed,
-        batch_idx=None,
-        data_idx=0,
-        is_distillation=False,
-        sequence_ids=sequence_ids,
-        feature_dir=data_folder,
-        msa_feature_dir=data_folder,
-        template_feature_dir=data_folder,
-        uniprot_msa_feature_dir=uniprot_msa_feature_dir,
-        is_monomer=(not is_multimer),
-        emb_dir=data_folder,
-    )
+        if config.data.common.use_musse:
+            batch, _ = load_and_process_musse(
+                config=config.data,
+                mode="predict",
+                seed=seed,
+                batch_idx=None,
+                data_idx=0,
+                is_distillation=False,
+                sequence_ids=sequence_ids,
+                feature_dir=data_folder,
+                is_monomer=(not is_multimer),
+                emb_dir=data_folder,
+                msa_feature_dir=None,
+                template_feature_dir=None,
+            )
+        else:
+            batch, _ = load_and_process(
+                config=config.data,
+                mode="predict",
+                seed=seed,
+                batch_idx=None,
+                data_idx=0,
+                is_distillation=False,
+                sequence_ids=sequence_ids,
+                monomer_feature_dir=data_folder,
+                uniprot_msa_dir=uniprot_msa_dir,
+                is_monomer=(not is_multimer),
+            )
     batch = UnifoldDataset.collater([batch])
     return batch
 
@@ -91,7 +104,11 @@ def main(args):
     if args.sample_templates:
         # enable template samples for diversity
         config.data.predict.subsample_templates = True
-    model = AlphaFold(config) if not config.data.common.use_musse else AlphaFoldMusse(config)
+    model = (
+        AlphaFold(config)
+        if not config.data.common.use_musse
+        else AlphaFoldMusse(config)
+    )
 
     print("start to load params {}".format(args.param_path))
     state_dict = torch.load(args.param_path)["ema"]["params"]
