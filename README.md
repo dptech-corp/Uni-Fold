@@ -243,6 +243,36 @@ bash run_uf_symmetry.sh \
 
 to inference with UF-Symmetry. **Note that the input FASTA file should contain the sequences of the asymmetric unit only, and a symmetry group must be specified for the model.**
 
+## Run Uni-Fold Musse
+
+### Installing Uni-Fold MuSSe
+
+Clone & install unifold.
+```shell
+git clone --single-branch -b Musse git@github.com:dptech-corp/Uni-Fold.git unifold_musse
+cd unifold_musse
+pip install -e .
+```
+### Downloading the pre-trained model parameters
+Use the following command to download the parameters of our further pre-trained protein language model and single sequence protein complex predictor:
+```shell
+# the protein language model
+wget https://bioos-hermite-beijing.tos-cn-beijing.volces.com/unifold_model/unifold_musse/plm.pt 
+
+# the protein complex predictor
+wget https://bioos-hermite-beijing.tos-cn-beijing.volces.com/unifold_model/unifold_musse/mp.pt
+```
+
+### Running Uni-Fold MuSSe
+Run the following command to predict the structure of the target fasta:
+```shell
+bash run_unifold_musse.sh \
+    /path/to/the/input.fasta \   # target fasta file
+    /path/to/the/output/directory/ \    # output directory
+    /path/to/multimer_model_parameters.pt \ # multimer predictor parameters
+    /path/to/pretrain_lm_parameters.pt  # language model parameters
+    
+```
 ## Inference on Hermite
 
 We provide covenient structure prediction service on [Hermite™](https://hermite.dp.tech/), a new-generation drug design platform powered by AI, physics, and computing. Users only need to upload sequences of protein monomers and multimers to obtain the predicted structures from Uni-Fold, acompanied by various analyzing tools. [Click here](https://docs.google.com/document/d/1iFdezkKJVuhyqN3WvzsC7-422T-zf18IhP7M9CBj5gs) for more information of how to use Hermite™.

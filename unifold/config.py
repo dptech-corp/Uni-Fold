@@ -21,6 +21,7 @@ eps = mlc.FieldReference(1e-8, field_type=float)
 inf = mlc.FieldReference(3e4, field_type=float)
 use_templates = mlc.FieldReference(True, field_type=bool)
 is_multimer = mlc.FieldReference(False, field_type=bool)
+use_musse = mlc.FieldReference(False, field_type=bool)
 
 
 def base_config():
@@ -56,6 +57,7 @@ def base_config():
                         "msa_chains": [N_MSA, None],
                         "msa_row_mask": [N_MSA],
                         "num_recycling_iters": [],
+                        "num_ensembles": [],
                         "pseudo_beta": [N_RES, None],
                         "pseudo_beta_mask": [N_RES],
                         "residue_index": [N_RES],
@@ -94,6 +96,7 @@ def base_config():
                         "sym_id": [N_RES],
                         "entity_id": [N_RES],
                         "num_sym": [N_RES],
+                        "token": [N_RES, None, None],
                         "asym_len": [None],
                         "cluster_bias_mask": [N_MSA],
                     },
@@ -117,6 +120,7 @@ def base_config():
                     "msa_cluster_features": True,
                     "reduce_msa_clusters_by_max_templates": True,
                     "resample_msa_in_recycling": True,
+                    "train_max_date": "2022-04-30",
                     "template_features": [
                         "template_all_atom_positions",
                         "template_sum_probs",
@@ -133,6 +137,8 @@ def base_config():
                         "between_segment_residues",
                         "deletion_matrix",
                         "num_recycling_iters",
+                        "num_ensembles",
+                        "token",
                         "crop_and_fix_size_seed",
                     ],
                     "recycling_features": [
@@ -160,6 +166,7 @@ def base_config():
                     ],
                     "use_templates": use_templates,
                     "is_multimer": is_multimer,
+                    "use_musse": use_musse,
                     "use_template_torsion_angles": use_templates,
                     "max_recycling_iters": max_recycling_iters,
                 },
@@ -240,6 +247,7 @@ def base_config():
             },
             "model": {
                 "is_multimer": is_multimer,
+                "use_musse": use_musse,
                 "input_embedder": {
                     "tf_dim": 22,
                     "msa_dim": 49,
@@ -255,6 +263,12 @@ def base_config():
                     "max_bin": 20.75,
                     "num_bins": 15,
                     "inf": 1e8,
+                },
+                "esm2_embedder": {
+                    "token_dim": 2560,
+                    "d_pair": d_pair,
+                    "d_msa": d_msa,
+                    "dropout": 0.1,
                 },
                 "template": {
                     "distogram": {
@@ -591,6 +605,22 @@ def model_config(name, train=False):
         recursive_set(c, "max_msa_clusters", 256)
         c.data.train.crop_size = 384
         c.loss.violation.weight = 0.5
+    elif name == "unifold_musse":
+        c = multimer(c)
+        recursive_set(c, "use_musse", True)
+        recursive_set(c, "d_msa", 1024)
+        recursive_set(c, "d_single", 1024)
+        recursive_set(c, "num_heads_msa", 32)
+        recursive_set(c, "num_heads_ipa", 32)
+        c.model.template.enabled = False
+        c.model.template.embed_angles = False
+        c.model.extra_msa.enabled = False
+        recursive_set(c, "use_templates", False)
+        recursive_set(c, "use_template_torsion_angles", False)
+        c.loss.masked_msa.weight = 0.0
+        c.loss.repr_norm.weight = 0.0
+        c.model.heads.pae.disable_enhance_head = False
+        c.model.esm2_embedder.token_dim = 2560
     elif name == "multimer_af2":
         recursive_set(c, "max_extra_msa", 1152)
         recursive_set(c, "max_msa_clusters", 256)

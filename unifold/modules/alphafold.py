@@ -64,25 +64,27 @@ class AlphaFold(nn.Module):
             self.template_pair_stack = TemplatePairStack(
                 **template_config["template_pair_stack"],
             )
+
+            self.enable_template_pointwise_attention = template_config[
+                "template_pointwise_attention"
+            ].enabled
+            if self.enable_template_pointwise_attention:
+                self.template_pointwise_att = TemplatePointwiseAttention(
+                    **template_config["template_pointwise_attention"],
+                )
+            else:
+                self.template_proj = TemplateProjection(
+                    **template_config["template_pointwise_attention"],
+                )
         else:
             self.template_pair_stack = None
-        self.enable_template_pointwise_attention = template_config[
-            "template_pointwise_attention"
-        ].enabled
-        if self.enable_template_pointwise_attention:
-            self.template_pointwise_att = TemplatePointwiseAttention(
-                **template_config["template_pointwise_attention"],
+        if extra_msa_config.enabled:
+            self.extra_msa_embedder = ExtraMSAEmbedder(
+                **extra_msa_config["extra_msa_embedder"],
             )
-        else:
-            self.template_proj = TemplateProjection(
-                **template_config["template_pointwise_attention"],
+            self.extra_msa_stack = ExtraMSAStack(
+                **extra_msa_config["extra_msa_stack"],
             )
-        self.extra_msa_embedder = ExtraMSAEmbedder(
-            **extra_msa_config["extra_msa_embedder"],
-        )
-        self.extra_msa_stack = ExtraMSAStack(
-            **extra_msa_config["extra_msa_stack"],
-        )
         self.evoformer = EvoformerStack(
             **config["evoformer_stack"],
         )
@@ -106,14 +108,14 @@ class AlphaFold(nn.Module):
 
     def half(self):
         super().half()
-        if (not getattr(self, "inference", False)):
+        if not getattr(self, "inference", False):
             self.__make_input_float__()
         self.dtype = torch.half
         return self
 
     def bfloat16(self):
         super().bfloat16()
-        if (not getattr(self, "inference", False)):
+        if not getattr(self, "inference", False):
             self.__make_input_float__()
         self.dtype = torch.bfloat16
         return self
@@ -135,6 +137,7 @@ class AlphaFold(nn.Module):
     def inference_mode(self):
         def set_inference_mode(module):
             setattr(module, "inference", True)
+
         self.apply(set_inference_mode)
 
     def __convert_input_dtype__(self, batch):
@@ -144,7 +147,16 @@ class AlphaFold(nn.Module):
                 batch[key] = batch[key].type(self.dtype)
         return batch
 
-    def embed_templates_pair_core(self, batch, z, pair_mask, tri_start_attn_mask, tri_end_attn_mask, templ_dim, multichain_mask_2d):
+    def embed_templates_pair_core(
+        self,
+        batch,
+        z,
+        pair_mask,
+        tri_start_attn_mask,
+        tri_end_attn_mask,
+        templ_dim,
+        multichain_mask_2d,
+    ):
         if self.config.template.template_pair_embedder.v2_feature:
             t = build_template_pair_feat_v2(
                 batch,
@@ -185,7 +197,10 @@ class AlphaFold(nn.Module):
     def embed_templates_pair(
         self, batch, z, pair_mask, tri_start_attn_mask, tri_end_attn_mask, templ_dim
     ):
-        if self.config.template.template_pair_embedder.v2_feature and "asym_id" in batch:
+        if (
+            self.config.template.template_pair_embedder.v2_feature
+            and "asym_id" in batch
+        ):
             multichain_mask_2d = (
                 batch["asym_id"][..., :, None] == batch["asym_id"][..., None, :]
             )
@@ -194,7 +209,15 @@ class AlphaFold(nn.Module):
             multichain_mask_2d = None
 
         if self.training or self.enable_template_pointwise_attention:
-            t = self.embed_templates_pair_core(batch, z, pair_mask, tri_start_attn_mask, tri_end_attn_mask, templ_dim, multichain_mask_2d)
+            t = self.embed_templates_pair_core(
+                batch,
+                z,
+                pair_mask,
+                tri_start_attn_mask,
+                tri_end_attn_mask,
+                templ_dim,
+                multichain_mask_2d,
+            )
             if self.enable_template_pointwise_attention:
                 t = self.template_pointwise_att(
                     t,
@@ -216,17 +239,29 @@ class AlphaFold(nn.Module):
             if n_templ <= 0:
                 t = None
             else:
-                template_batch = { k: v for k, v in batch.items() if k.startswith("template_") }
+                template_batch = {
+                    k: v for k, v in batch.items() if k.startswith("template_")
+                }
+
                 def embed_one_template(i):
                     def slice_template_tensor(t):
                         s = [slice(None) for _ in t.shape]
                         s[batch_templ_dim] = slice(i, i + 1)
                         return t[s]
+
                     template_feats = tensor_tree_map(
                         slice_template_tensor,
                         template_batch,
                     )
-                    t = self.embed_templates_pair_core(template_feats, z, pair_mask, tri_start_attn_mask, tri_end_attn_mask, templ_dim, multichain_mask_2d)
+                    t = self.embed_templates_pair_core(
+                        template_feats,
+                        z,
+                        pair_mask,
+                        tri_start_attn_mask,
+                        tri_end_attn_mask,
+                        templ_dim,
+                        multichain_mask_2d,
+                    )
                     return t
 
                 t = embed_one_template(0)
@@ -404,7 +439,7 @@ class AlphaFold(nn.Module):
         outputs["pred_frame_tensor"] = outputs["sm"]["frames"][-1]
 
         # use float32 for numerical stability
-        if (not getattr(self, "inference", False)):
+        if not getattr(self, "inference", False):
             m_1_prev = m[..., 0, :, :].float()
             z_prev = z.float()
             x_prev = outputs["final_atom_positions"].float()

@@ -3,3 +3,4 @@
 import argparse
 
 from . import task, model, loss
+from . import musse

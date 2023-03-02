@@ -11,11 +11,14 @@ import json
 import pickle
 from unifold.config import model_config
 from unifold.modules.alphafold import AlphaFold
+from unifold.musse.modules.alphafold import AlphaFoldMusse
 from unifold.data import residue_constants, protein
 from unifold.dataset import load_and_process, UnifoldDataset
+from unifold.musse.dataset import load_and_process as load_and_process_musse
 from unicore.utils import (
     tensor_tree_map,
 )
+
 
 def get_device_mem(device):
     if device != "cpu" and torch.cuda.is_available():
@@ -26,19 +29,20 @@ def get_device_mem(device):
     else:
         return 40
 
+
 def automatic_chunk_size(seq_len, device, is_bf16):
     total_mem_in_GB = get_device_mem(device)
-    factor = math.sqrt(total_mem_in_GB/40.0*(0.55 * is_bf16 + 0.45))*0.95
-    if seq_len < int(1024*factor):
+    factor = math.sqrt(total_mem_in_GB / 40.0 * (0.55 * is_bf16 + 0.45)) * 0.95
+    if seq_len < int(1024 * factor):
         chunk_size = 256
         block_size = None
-    elif seq_len < int(2048*factor):
+    elif seq_len < int(2048 * factor):
         chunk_size = 128
         block_size = None
-    elif seq_len < int(3072*factor):
+    elif seq_len < int(3072 * factor):
         chunk_size = 64
         block_size = None
-    elif seq_len < int(4096*factor):
+    elif seq_len < int(4096 * factor):
         chunk_size = 32
         block_size = 512
     else:
@@ -46,30 +50,47 @@ def automatic_chunk_size(seq_len, device, is_bf16):
         block_size = 256
     return chunk_size, block_size
 
+
 def load_feature_for_one_target(
     config, data_folder, seed=0, is_multimer=False, use_uniprot=False
 ):
     if not is_multimer:
         uniprot_msa_dir = None
-        sequence_ids = ["A"]
+        sequence_ids = open(os.path.join(data_folder, "chains.txt")).readline().split()
         if use_uniprot:
             uniprot_msa_dir = data_folder
 
     else:
         uniprot_msa_dir = data_folder
         sequence_ids = open(os.path.join(data_folder, "chains.txt")).readline().split()
-    batch, _ = load_and_process(
-        config=config.data,
-        mode="predict",
-        seed=seed,
-        batch_idx=None,
-        data_idx=0,
-        is_distillation=False,
-        sequence_ids=sequence_ids,
-        monomer_feature_dir=data_folder,
-        uniprot_msa_dir=uniprot_msa_dir,
-        is_monomer=(not is_multimer),
-    )
+        if config.data.common.use_musse:
+            batch, _ = load_and_process_musse(
+                config=config.data,
+                mode="predict",
+                seed=seed,
+                batch_idx=None,
+                data_idx=0,
+                is_distillation=False,
+                sequence_ids=sequence_ids,
+                feature_dir=data_folder,
+                is_monomer=(not is_multimer),
+                emb_dir=data_folder,
+                msa_feature_dir=None,
+                template_feature_dir=None,
+            )
+        else:
+            batch, _ = load_and_process(
+                config=config.data,
+                mode="predict",
+                seed=seed,
+                batch_idx=None,
+                data_idx=0,
+                is_distillation=False,
+                sequence_ids=sequence_ids,
+                monomer_feature_dir=data_folder,
+                uniprot_msa_dir=uniprot_msa_dir,
+                is_monomer=(not is_multimer),
+            )
     batch = UnifoldDataset.collater([batch])
     return batch
 
@@ -83,7 +104,11 @@ def main(args):
     if args.sample_templates:
         # enable template samples for diversity
         config.data.predict.subsample_templates = True
-    model = AlphaFold(config)
+    model = (
+        AlphaFold(config)
+        if not config.data.common.use_musse
+        else AlphaFoldMusse(config)
+    )
 
     print("start to load params {}".format(args.param_path))
     state_dict = torch.load(args.param_path)["ema"]["params"]
@@ -125,10 +150,8 @@ def main(args):
         seq_len = batch["aatype"].shape[-1]
         # faster prediction with large chunk/block size
         chunk_size, block_size = automatic_chunk_size(
-                                    seq_len,
-                                    args.model_device,
-                                    args.bf16
-                                )
+            seq_len, args.model_device, args.bf16
+        )
         model.globals.chunk_size = chunk_size
         model.globals.block_size = block_size
 
@@ -152,9 +175,8 @@ def main(args):
         if not args.save_raw_output:
             score = ["plddt", "ptm", "iptm", "iptm+ptm"]
             out = {
-                    k: v for k, v in raw_out.items()
-                    if k.startswith("final_") or k in score
-                }
+                k: v for k, v in raw_out.items() if k.startswith("final_") or k in score
+            }
         else:
             out = raw_out
         del raw_out
@@ -181,10 +203,12 @@ def main(args):
         plddts[cur_save_name] = str(mean_plddt)
         if is_multimer:
             ptms[cur_save_name] = str(np.mean(out["iptm+ptm"]))
-        with open(os.path.join(output_dir, cur_save_name + '.pdb'), "w") as f:
+        with open(os.path.join(output_dir, cur_save_name + ".pdb"), "w") as f:
             f.write(protein.to_pdb(cur_protein))
         if args.save_raw_output:
-            with gzip.open(os.path.join(output_dir, cur_save_name + '_outputs.pkl.gz'), 'wb') as f:
+            with gzip.open(
+                os.path.join(output_dir, cur_save_name + "_outputs.pkl.gz"), "wb"
+            ) as f:
                 pickle.dump(out, f)
         del out
 
