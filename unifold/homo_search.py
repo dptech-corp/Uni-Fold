@@ -278,7 +278,7 @@ def main(argv):
         chain_order_path = os.path.join(output_dir, "chains.txt")
         with open(chain_order_path, "w") as f:
             f.write(f"{fasta_name}_A")
-        fasta_names = [fasta_name]
+        fasta_names = [f"{fasta_name}_A"]
         fasta_paths = [fasta_path]
 
     # Check for duplicate FASTA file names.
