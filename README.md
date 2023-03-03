@@ -161,15 +161,19 @@ This command starts a training process on the [demo data](example_data) included
 
 ### Full training dataset download
 
-The full training dataset used in Uni-Fold is hosted at [modelscope](https://modelscope.cn/datasets/DPTech/Uni-Fold-Data/summary). You can download it by the following instructions. 
+We thank [ModelScope](https://modelscope.cn/home) and [Volcengine](https://www.volcengine.com) for providing free hosts of the full training dataset. The downloaded dataset could be directly used to train Uni-Fold from-scratch.
 
-First, install modelscope
+#### Download from ModelScope
+
+Download the dataset from [modelscope](https://modelscope.cn/datasets/DPTech/Uni-Fold-Data/summary) following: 
+
+1. install modelscope
 
 ```bash
 pip3 install https://databot-algo.oss-cn-zhangjiakou.aliyuncs.com/maas/modelscope-1.0.0-py3-none-any.whl 
 ```
 
-Then, download the dataset in python
+2. download the dataset with python
 
 ```python
 import os
@@ -183,7 +187,35 @@ ds = MsDataset.load(dataset_name='Uni-Fold-Data', namespace='DPTech', split='tra
 # The data will be located at ${your_data_path}/modelscope/hub/datasets/downloads/DPTech/Uni-Fold-Data/master/*
 ```
 
-The downloaded dataset could be directly used by Uni-Fold for the training.
+#### Download from Volcengine
+
+1. install rclone
+
+```bash
+curl https://rclone.org/install.sh | sudo bash
+```
+
+2. get the config file path of rclone via
+```bash
+rclone config file
+```
+
+3. update the config file with the following content
+```bash
+[volces-tos]
+type = s3
+provider = Other
+region = cn-beijing
+endpoint = https://tos-s3-cn-beijing.volces.com
+force_path_style = false
+disable_http2 = true
+```
+
+4. download the dataset
+```bash
+data_path = "your_data_path"
+rclone sync volces-tos:bioos-hermite-beijing/unifold_data $data_path
+```
 
 ### From-scratch Training
 
