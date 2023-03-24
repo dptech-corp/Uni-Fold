@@ -1,7 +1,3 @@
-"""
-Writen by Yang Shuwen (374308602@qq.com)
-Date: 2022/07/18
-"""
 import numpy as np
 from typing import List, Tuple
 

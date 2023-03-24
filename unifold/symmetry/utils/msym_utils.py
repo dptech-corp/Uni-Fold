@@ -1,13 +1,9 @@
-"""
-Writen by Yang Shuwen (374308602@qq.com)
-Date: 2022/07/19
-"""
 from functools import reduce
 import string
 from libmsym import libmsym as m
 import numpy as np
 from typing import *
-from unifold.fold.data.geometry_utils import remainder, normalize_axis, ANGLE_EPS, get_standard_syms_axes, \
+from .geometry_utils import remainder, normalize_axis, ANGLE_EPS, get_standard_syms_axes, \
     get_rotation_from_axis_theta, expand_groups, get_num_AU, PairingFailError, LabelType
 
 
