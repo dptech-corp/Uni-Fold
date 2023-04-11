@@ -2,7 +2,7 @@ import numpy as np
 import ml_collections as mlc
 from typing import *
 
-from unifold.symmetry.geometry_utils import get_transform
+from .utils import get_transform
 from ..dataset import load_and_process
 
 import torch
