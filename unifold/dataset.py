@@ -456,7 +456,7 @@ class UnifoldMultimerDataset(UnifoldDataset):
                 label_ids = self.pdb_chains[pdb_id]
                 symmetry_operations = None
             sequence_ids = [
-                self.inverse_multi_label.get(chain_id) for chain_id in label_ids
+                self.inverse_multi_label[chain_id] for chain_id in label_ids
             ]
             monomer_feature_path, uniprot_msa_path, label_path = (
                 self.monomer_feature_path,
