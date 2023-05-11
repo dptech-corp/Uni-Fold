@@ -443,15 +443,20 @@ class UnifoldMultimerDataset(UnifoldDataset):
         else:
             pdb_id = self.get_pdb_name(label_id)
             if pdb_id in self.pdb_assembly and self.mode == "train":
-                label_ids = [
-                    pdb_id + "_" + id for id in self.pdb_assembly[pdb_id]["chains"]
-                ]
-                symmetry_operations = [t for t in self.pdb_assembly[pdb_id]["opers"]]
+                label_ids = []
+                symmetry_operations = []
+                for cid, op in zip(self.pdb_assembly[pdb_id]["chains"], self.pdb_assembly[pdb_id]["opers"]):
+                    lid = pdb_id + "_" + cid
+                    if lid not in self.inverse_multi_label:
+                        logger.warning(f"sequence id of {lid} cannot be found. chain ignored in the assembly.")
+                    else:
+                        label_ids.append(lid)
+                        symmetry_operations.append(op)
             else:
                 label_ids = self.pdb_chains[pdb_id]
                 symmetry_operations = None
             sequence_ids = [
-                self.inverse_multi_label[chain_id] for chain_id in label_ids
+                self.inverse_multi_label.get(chain_id) for chain_id in label_ids
             ]
             monomer_feature_path, uniprot_msa_path, label_path = (
                 self.monomer_feature_path,
