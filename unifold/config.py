@@ -615,6 +615,54 @@ def model_config(name, train=False):
         c.loss.repr_norm.weight = 0
         c.loss.chain_centre_mass.weight = 1.0
         recursive_set(c, "outer_product_mean_first", True)
+    elif name == "multimer_af2_v3":
+        recursive_set(c, "max_extra_msa", 2048)
+        recursive_set(c, "max_msa_clusters", 512)
+        recursive_set(c, "is_multimer", True)
+        recursive_set(c, "v2_feature", True)
+        recursive_set(c, "gumbel_sample", True)
+        c.model.template.template_angle_embedder.d_in = 34
+        c.model.template.template_pair_stack.tri_attn_first = False
+        c.model.template.template_pointwise_attention.enabled = False
+        c.model.heads.pae.enabled = True
+        c.model.heads.experimentally_resolved.enabled = True
+        c.model.heads.masked_msa.d_out = 22
+        c.model.structure_module.separate_kv = True
+        c.model.structure_module.ipa_bias = False
+        c.model.structure_module.trans_scale_factor = 20
+        c.loss.pae.weight = 0.1
+        c.loss.violation.weight = 0.5
+        c.loss.experimentally_resolved.weight = 0.01
+        c.model.input_embedder.tf_dim = 21
+        c.globals.alphafold_original_mode = True
+        c.data.train.crop_size = 384
+        c.loss.repr_norm.weight = 0
+        c.loss.chain_centre_mass.weight = 1.0
+        recursive_set(c, "outer_product_mean_first", True)
+    elif name == "multimer_af2_model45_v3":
+        recursive_set(c, "max_extra_msa", 1152)
+        recursive_set(c, "max_msa_clusters", 512)
+        recursive_set(c, "is_multimer", True)
+        recursive_set(c, "v2_feature", True)
+        recursive_set(c, "gumbel_sample", True)
+        c.model.template.template_angle_embedder.d_in = 34
+        c.model.template.template_pair_stack.tri_attn_first = False
+        c.model.template.template_pointwise_attention.enabled = False
+        c.model.heads.pae.enabled = True
+        c.model.heads.experimentally_resolved.enabled = True
+        c.model.heads.masked_msa.d_out = 22
+        c.model.structure_module.separate_kv = True
+        c.model.structure_module.ipa_bias = False
+        c.model.structure_module.trans_scale_factor = 20
+        c.loss.pae.weight = 0.1
+        c.loss.violation.weight = 0.5
+        c.loss.experimentally_resolved.weight = 0.01
+        c.model.input_embedder.tf_dim = 21
+        c.globals.alphafold_original_mode = True
+        c.data.train.crop_size = 384
+        c.loss.repr_norm.weight = 0
+        c.loss.chain_centre_mass.weight = 1.0
+        recursive_set(c, "outer_product_mean_first", True)
     else:
         raise ValueError(f"invalid --model-name: {name}.")
     if train:
