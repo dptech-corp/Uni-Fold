@@ -57,6 +57,7 @@ class Param:
     param: Union[torch.Tensor, List[torch.Tensor]]
     param_type: ParamType = ParamType.Other
     stacked: bool = False
+    swap:  bool = False
 
 
 def _process_translations_dict(d, top_layer=True):
@@ -130,7 +131,7 @@ def assign(translation_dict, orig_weights):
 
 def import_jax_weights_(model, npz_path, version="model_1"):
     is_multimer = False
-    if version in ["multimer_af2"]:
+    if version in ["multimer_af2", "multimer_af2_v3", "multimer_af2_model45_v3"]:
         is_multimer = True
     data = np.load(npz_path, allow_pickle=True)
     if 'arr_0' in data:
@@ -147,8 +148,10 @@ def import_jax_weights_(model, npz_path, version="model_1"):
     #######################
 
     LinearWeight = lambda l: (Param(l, param_type=ParamType.LinearWeight))
+    LinearWeightSwap = lambda l: (Param(l, param_type=ParamType.LinearWeight, swap=True))
 
     LinearBias = lambda l: (Param(l))
+    LinearBiasSwap = lambda l: (Param(l, swap=True))
 
     LinearWeightMHA = lambda l: (Param(l, param_type=ParamType.LinearWeightMHA))
 
@@ -167,6 +170,10 @@ def import_jax_weights_(model, npz_path, version="model_1"):
     LinearRightParams = lambda l,index: {
             "weights": LinearWeight(l.weight[index:,:]),
             "bias": LinearBias(l.bias[index:]),
+    }
+    LinearSwapParams = lambda l, index: {
+        "weights": LinearWeightSwap(l.weight),
+        "bias": LinearBiasSwap(l.bias),
     }
 
     LinearMHAParams = lambda l: {
@@ -213,32 +220,63 @@ def import_jax_weights_(model, npz_path, version="model_1"):
         "feat_2d_weights": LinearWeight(tri_att.linear.weight),
         "attention": AttentionGatedParams(tri_att.mha),
     }
+    if "v3" in version:
+        TriMulOutParams = lambda tri_mul: {
+            "left_norm_input": LayerNormParams(tri_mul.layer_norm_in),
+            # "left_projection": LinearLeftParams(tri_mul.linear_ab_p, tri_mul.linear_ab_p.weight.shape[0]//2),
+            # "right_projection":  LinearRightParams(tri_mul.linear_ab_p, tri_mul.linear_ab_p.weight.shape[0]//2),
+            "projection": LinearParams(tri_mul.linear_ab_p),
+            # "left_gate":  LinearLeftParams(tri_mul.linear_ab_g, tri_mul.linear_ab_g.weight.shape[0]//2),
+            # "right_gate":  LinearRightParams(tri_mul.linear_ab_g, tri_mul.linear_ab_g.weight.shape[0]//2),
+            "gate": LinearParams(tri_mul.linear_ab_g),
+            "center_norm": LayerNormParams(tri_mul.layer_norm_out),
+            "output_projection": LinearParams(tri_mul.linear_z),
+            "gating_linear": LinearParams(tri_mul.linear_g),
+        }
 
-    TriMulOutParams = lambda tri_mul: {
-        "layer_norm_input": LayerNormParams(tri_mul.layer_norm_in),
-        "left_projection": LinearLeftParams(tri_mul.linear_ab_p, tri_mul.linear_ab_p.weight.shape[0]//2),
-        "right_projection":  LinearRightParams(tri_mul.linear_ab_p, tri_mul.linear_ab_p.weight.shape[0]//2),
-        "left_gate":  LinearLeftParams(tri_mul.linear_ab_g, tri_mul.linear_ab_g.weight.shape[0]//2),
-        "right_gate":  LinearRightParams(tri_mul.linear_ab_g, tri_mul.linear_ab_g.weight.shape[0]//2),
-        "center_layer_norm": LayerNormParams(tri_mul.layer_norm_out),
-        "output_projection": LinearParams(tri_mul.linear_z),
-        "gating_linear": LinearParams(tri_mul.linear_g),
-    }
+        # see commit b88f8da on the Alphafold repo
+        # Alphafold swaps the pseudocode's a and b between the incoming/outcoming
+        # iterations of triangle multiplication, which is confusing and not
+        # reproduced in our implementation.
+        TriMulInParams = lambda tri_mul: {
+            "left_norm_input": LayerNormParams(tri_mul.layer_norm_in),
+            # "left_projection":  LinearRightParams(tri_mul.linear_ab_p, tri_mul.linear_ab_p.weight.shape[0]//2),
+            # "right_projection":  LinearLeftParams(tri_mul.linear_ab_p, tri_mul.linear_ab_p.weight.shape[0]//2),
+            "projection": LinearSwapParams(tri_mul.linear_ab_p, tri_mul.linear_ab_p.weight.shape[0]//2),
+            "gate": LinearSwapParams(tri_mul.linear_ab_g, tri_mul.linear_ab_g.weight.shape[0]//2),
+            # "left_gate":  LinearRightParams(tri_mul.linear_ab_g, tri_mul.linear_ab_g.weight.shape[0]//2),
+            # "right_gate":  LinearLeftParams(tri_mul.linear_ab_g, tri_mul.linear_ab_g.weight.shape[0]//2),
+            "center_norm": LayerNormParams(tri_mul.layer_norm_out),
+            "output_projection": LinearParams(tri_mul.linear_z),
+            "gating_linear": LinearParams(tri_mul.linear_g),
+        }
+    else:
 
-    # see commit b88f8da on the Alphafold repo
-    # Alphafold swaps the pseudocode's a and b between the incoming/outcoming
-    # iterations of triangle multiplication, which is confusing and not
-    # reproduced in our implementation.
-    TriMulInParams = lambda tri_mul: {
-        "layer_norm_input": LayerNormParams(tri_mul.layer_norm_in),
-        "left_projection":  LinearRightParams(tri_mul.linear_ab_p, tri_mul.linear_ab_p.weight.shape[0]//2),
-        "right_projection":  LinearLeftParams(tri_mul.linear_ab_p, tri_mul.linear_ab_p.weight.shape[0]//2),
-        "left_gate":  LinearRightParams(tri_mul.linear_ab_g, tri_mul.linear_ab_g.weight.shape[0]//2),
-        "right_gate":  LinearLeftParams(tri_mul.linear_ab_g, tri_mul.linear_ab_g.weight.shape[0]//2),
-        "center_layer_norm": LayerNormParams(tri_mul.layer_norm_out),
-        "output_projection": LinearParams(tri_mul.linear_z),
-        "gating_linear": LinearParams(tri_mul.linear_g),
-    }
+        TriMulOutParams = lambda tri_mul: {
+            "layer_norm_input": LayerNormParams(tri_mul.layer_norm_in),
+            "left_projection": LinearLeftParams(tri_mul.linear_ab_p, tri_mul.linear_ab_p.weight.shape[0]//2),
+            "right_projection":  LinearRightParams(tri_mul.linear_ab_p, tri_mul.linear_ab_p.weight.shape[0]//2),
+            "left_gate":  LinearLeftParams(tri_mul.linear_ab_g, tri_mul.linear_ab_g.weight.shape[0]//2),
+            "right_gate":  LinearRightParams(tri_mul.linear_ab_g, tri_mul.linear_ab_g.weight.shape[0]//2),
+            "center_layer_norm": LayerNormParams(tri_mul.layer_norm_out),
+            "output_projection": LinearParams(tri_mul.linear_z),
+            "gating_linear": LinearParams(tri_mul.linear_g),
+        }
+
+        # see commit b88f8da on the Alphafold repo
+        # Alphafold swaps the pseudocode's a and b between the incoming/outcoming
+        # iterations of triangle multiplication, which is confusing and not
+        # reproduced in our implementation.
+        TriMulInParams = lambda tri_mul: {
+            "layer_norm_input": LayerNormParams(tri_mul.layer_norm_in),
+            "left_projection":  LinearRightParams(tri_mul.linear_ab_p, tri_mul.linear_ab_p.weight.shape[0]//2),
+            "right_projection":  LinearLeftParams(tri_mul.linear_ab_p, tri_mul.linear_ab_p.weight.shape[0]//2),
+            "left_gate":  LinearRightParams(tri_mul.linear_ab_g, tri_mul.linear_ab_g.weight.shape[0]//2),
+            "right_gate":  LinearLeftParams(tri_mul.linear_ab_g, tri_mul.linear_ab_g.weight.shape[0]//2),
+            "center_layer_norm": LayerNormParams(tri_mul.layer_norm_out),
+            "output_projection": LinearParams(tri_mul.linear_z),
+            "gating_linear": LinearParams(tri_mul.linear_g),
+        }
 
     PairTransitionParams = lambda pt: {
         "input_layer_norm": LayerNormParams(pt.layer_norm),
@@ -526,7 +564,7 @@ def import_jax_weights_(model, npz_path, version="model_1"):
     missing = [k for k in keys if k not in flat_keys]
     # assert len(missing) == 0
     # assert(sorted(list(flat.keys())) == sorted(list(data.keys())))
-    print("incorrect keys:", incorrect)
-    print("missing keys:", missing)
+    print("incorrect keys:", incorrect) # which with error names
+    print("missing keys:", missing) # which with 
     # Set weights
     assign(flat, data)
