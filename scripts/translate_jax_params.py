@@ -57,6 +57,7 @@ class Param:
     param: Union[torch.Tensor, List[torch.Tensor]]
     param_type: ParamType = ParamType.Other
     stacked: bool = False
+    swap:  bool = False
 
 
 def _process_translations_dict(d, top_layer=True):
