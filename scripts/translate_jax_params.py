@@ -57,7 +57,7 @@ class Param:
     param: Union[torch.Tensor, List[torch.Tensor]]
     param_type: ParamType = ParamType.Other
     stacked: bool = False
-    swap:  bool = False
+    swap: bool = False
 
 
 def _process_translations_dict(d, top_layer=True):
@@ -101,6 +101,7 @@ def stacked(param_dict_list, out=None):
                 param=[param.param for param in v],
                 param_type=v[0].param_type,
                 stacked=True,
+                swap=v[0].swap
             )
 
             out[k] = stacked_param
@@ -122,7 +123,12 @@ def assign(translation_dict, orig_weights):
             try:
                 weights = list(map(param_type.transformation, weights))
                 for p, w in zip(ref, weights):
-                    p.copy_(w)
+                    if param.swap:
+                        index = p.shape[0]//2
+                        p[:index].copy_(w[index:])
+                        p[index:].copy_(w[:index])
+                    else:
+                        p.copy_(w)
             except:
                 print(k)
                 print(ref[0].shape)
