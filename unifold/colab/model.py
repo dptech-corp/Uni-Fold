@@ -139,7 +139,9 @@ def colab_inference(
         plddts[cur_save_name] = str(mean_plddt)
         if is_multimer and symmetry_group is None:
             ptms[cur_save_name] = str(np.mean(out["iptm+ptm"]))
-        with open(os.path.join(output_dir, cur_save_name + '.pdb'), "w") as f:
+        
+        best_results_path = os.path.join(output_dir, cur_save_name + '.pdb')
+        with open(best_results_path, "w") as f:
             f.write(protein.to_pdb(cur_protein))
 
         if is_multimer and symmetry_group is None:
@@ -148,14 +150,16 @@ def colab_inference(
                 best_result = {
                     "protein": cur_protein,
                     "plddt": out["plddt"],
-                    "pae": out["predicted_aligned_error"]
+                    "pae": out["predicted_aligned_error"],
+                    'best_results_path': best_results_path,
                 }
         else:
             if mean_plddt>best_score:
                 best_result = {
                     "protein": cur_protein,
                     "plddt": out["plddt"],
-                    "pae": None
+                    "pae": None,
+                    'best_results_path': best_results_path,
                 }
 
     print("plddts", plddts)
