@@ -142,7 +142,7 @@ def multi_chain_perm_align(out: Dict, batch: Dict, labels: List[Dict]) -> Dict:
             frames_mask[i, asym_res_idx - min_res] = true_frames_mask[asym_mask]
 
         # cross-matrix and hungarian algorithm finds the best permutation
-        # (n=N f=L), (n=N f=L), (n=N, p=L), (n=N, p=L) -> (ni'=N, nj'=N, ni=N, nj=N)
+        # (n=N, f=L), (n=N, f=L), (n=N, p=L), (n=N, p=L) -> (ni'=N, nj'=N, ni=N, nj=N)
         x_mat = compute_xx_fape(
             pred_frames=ph_frames_pred,
             target_frames=ph_frames_true,
@@ -150,11 +150,11 @@ def multi_chain_perm_align(out: Dict, batch: Dict, labels: List[Dict]) -> Dict:
             target_points=ph_frames_true._t,
             frames_mask=frames_mask,
             points_mask=points_mask,
-        ).cpu()
+        ).detach().cpu()
         # (ni'=N, nj'=N, ni=N, nj=N) -> (N, N)
         x_mat_frames = x_mat.sum(dim=(-1, -2)) / (x_mat.shape[-1] * x_mat.shape[-2])
         x_mat_points = x_mat.sum(dim=(-3, -4)) / (x_mat.shape[-3] * x_mat.shape[-4])
-        rows, cols = linear_sum_assignment((x_mat_frames + x_mat_points).transpose(-1, -2).numpy())
+        rows, cols = linear_sum_assignment((x_mat_frames + x_mat_points).numpy())
 
         # remap labels like: labels["ent_mask"] = ph_true_ca_pos[cols][ph_true_ca_mask[cols]]
         global_rows = local_perm_idxs
@@ -172,7 +172,12 @@ def multi_chain_perm_align(out: Dict, batch: Dict, labels: List[Dict]) -> Dict:
     return best_labels
 
 
-def merge_labels(batch: Dict, per_asym_residue_index: Dict[List[int]], labels: Dict, align: List[Tuple[int, int]]) -> Dict:
+def merge_labels(
+    batch: Dict,
+    per_asym_residue_index: Dict[int: List[int]],
+    labels: List[Dict],
+    align: List[Tuple[int, int]]
+) -> Dict:
     """ Reorders the labels
 
     Args:
