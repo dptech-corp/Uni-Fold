@@ -16,21 +16,24 @@ def compute_x_fape(
 ) -> th.Tensor:
     """ FAPE matrix from all frames to the cross-matrix of points,
     used to find a permutation which gives the optimal loss for a symmetric structure.
-    Notation:
+
+    Notation for use with n chains of length p, under f=k frames:
     - n: number of protein chains
-    - f: number of frames (length of chain)
     - p: number of points (length of chain)
     - d: dimension of points = 3
-    (..., (n f), 1, 1) @ (..., 1, n, p, d) -> (..., (n f), n, p, d)
-    (..., (n f), ni, p, d) - (..., (n f), nj, p, d) -> (..., ni, nj)
+    - f=k: arbitrary number of frames
+    (..., k, 1, 1) @ (..., 1, n, p, d) -> (..., k, n, p, d)
+    (..., k, ni, p, d) - (..., k, nj, p, d) -> (..., ni, nj)
+
+    Iff the frames from the same chains are used, then k=(n f) and f=p
 
     Args:
-        pred_frames: (..., (n f))
-        target_frames: (..., (n f))
-        pred_points: (..., n, p=f)
-        target_points: (..., n, p=f)
-        frames_mask: (..., (n f)) float tensor
-        points_mask: (..., n, p=f) float tensor
+        pred_frames: (..., k)
+        target_frames: (..., k)
+        pred_points: (..., n, p, d)
+        target_points: (..., n, p, d)
+        frames_mask: (..., k) float tensor
+        points_mask: (..., n, p) float tensor
 
     Returns:
         (..., n, n) th.Tensor
@@ -42,18 +45,18 @@ def compute_x_fape(
     if points_mask is not None:
         mask = mask * points_mask[..., None, :, None, :, :] * points_mask[..., None, None, :, :, :]
 
-    # (..., (n f), 1, 1) @ (..., 1, n, p, d) -> (..., (n f), n, p, d)
+    # (..., k, 1, 1) @ (..., 1, n, p, d) -> (..., k, n, p, d)
     local_pred_pos = pred_frames[..., None, None].invert().apply(
         pred_points[..., None, :, :, :].float(),
     )
     local_target_pos = target_frames[..., None, None].invert().apply(
         target_points[..., None, :, :, :].float(),
     )
-    # (..., (n f), ni, p, d) - (..., (n f), nj, p, d) -> (..., (n f), ni, nj, p)
+    # (..., k, ni, p, d) - (..., k, nj, p, d) -> (..., k, ni, nj, p)
     d_pt2 = (local_pred_pos.unsqueeze(dim=-3) - local_target_pos.unsqueeze(dim=-4)).square().sum(-1)
     d_pt = d_pt2.add_(1e-5).sqrt()
 
-    # (..., (n f), ni, nj, p) -> (..., ni, nj)
+    # (..., k, ni, nj, p) -> (..., ni, nj)
     if frames_mask is not None or points_mask is not None:
         x_fape = (d_pt * mask).sum(dim=(-1, -4)) / mask.sum(dim=(-1, -4))
     else:
@@ -62,90 +65,99 @@ def compute_x_fape(
     return x_fape
 
 
-def multi_chain_perm_align(out: Dict, batch: Dict, labels: List[Dict], shuffle_times: int = 2) -> Dict:
+def multi_chain_perm_align(out: Dict, batch: Dict, labels: List[Dict]) -> Dict:
     """ Permutes labels so that a structural loss wrt preds is minimized.
     Framed as a linear assignment problem, loss is sum of "individual" losses
     and the permutation is found by the Hungarian algorithm on the cross matrix.
+
+    WARNING! All keys in `out` have no batch size
     """
     assert isinstance(labels, list)
     ca_idx = rc.atom_order["CA"]
-    f_idxs = [ca_idx-1, ca_idx, ca_idx+1]
 
-    # [bsz, nres, f=3, d=3]
-    pred_ca_pos = out["final_atom_positions"][..., f_idxs, :].float()
+    # [bsz, nres, d=3]
+    pred_frames = Frame.from_tensor_4x4(out["pred_frame_tensor"])
     # [bsz, nres]
-    pred_ca_mask = out["final_atom_mask"][..., f_idxs].float().prod(dim=-1)
-    # list([nres, f=3, d=3])
-    true_ca_poses = [l["all_atom_positions"][..., f_idxs, :].float() for l in labels]
-    # list([nres,])
-    true_ca_masks = [l["all_atom_mask"][..., f_idxs].float().prod(dim=-1) for l in labels]
+    pred_frames_mask = batch["final_atom_mask"][..., [0, 1, 2]].float().prod(dim=-1)
+    # [bsz, nres, d=3]
+    true_frames = Frame.cat([Frame.from_tensor_4x4(l["true_frame_tensor"]) for l in labels], dim=0)
+    # [bsz, nres]
+    true_frames_mask = th.cat([l["frame_mask"] for l in labels], dim=0)
 
+    # get all unique chains
     unique_asym_ids = th.unique(batch["asym_id"])
     best_global_curr = th.clone(unique_asym_ids)
     best_global_perm = th.clone(unique_asym_ids)
     best_global_perm_list = best_global_perm.tolist()
 
+    # all indices associated with a chain (asymmetric unit)
     per_asym_residue_index = {}
     for cur_asym_id in unique_asym_ids:
         asym_mask = (batch["asym_id"] == cur_asym_id).bool()
         per_asym_residue_index[int(cur_asym_id)] = batch["residue_index"][asym_mask]
 
-    # for every unique structure with symmetric counterparts (works for 2a-2b structs, etc)
+    # will rename only for every unique structure with symmetric counterparts (works for abab, abb, abbcc, ...)
     unique_ent_ids, unique_ent_counts = th.unique(batch["entity_id"], return_counts=True)
+
+    # use all frames from non-symmetric chains, already-renamed symmetric chains and current entity
+    ref_frames_mask = th.zeros_like(pred_frames_mask)
+    for ent_id in unique_ent_ids:
+        ent_mask = batch["entity_id"] == ent_id
+        asym_ids = th.unique(batch["asym_id"][ent_mask])
+        if len(asym_ids) == 1:
+            asym_mask = batch["asym_id"] == asym_ids[0]
+            ref_frames_mask[asym_mask] = true_frames_mask[asym_mask]
+
+    # rename symmetric chains
     for ent_id, ent_count in zip(unique_ent_ids, unique_ent_counts):
         # see how many chains for the entity, if just 1, continue
         ent_mask = batch["entity_id"] == ent_id
         asym_ids = th.unique(batch["asym_id"][ent_mask])
         if len(asym_ids) == 1:
             continue
-        # create placeholders for values and corresponding masks
+        # create placeholders for points and corresponding masks of shape (n, l, d) and (n, l)
         local_perm_idxs = []
         ent_mask = batch["entity_id"] == ent_id
         ent_res_idx = batch["residue_index"][ent_mask]
         min_res, max_res = ent_res_idx.amin().item(), ent_res_idx.amax().item()
-        N = len(asym_ids)
-        L = max_res - min_res + 1
-        ph_pred_ca_pos = pred_ca_pos.new_zeros((N, L, 3, 3))
-        ph_true_ca_pos = pred_ca_pos.new_zeros((N, L, 3, 3))
-        ph_pred_ca_mask = pred_ca_mask.new_zeros((L,))
-        ph_true_ca_mask = pred_ca_mask.new_zeros((L,))
+        n = len(asym_ids)
+        l = max_res - min_res + 1
+        ph_pred_ca_pos = pred_frames._t.new_zeros((n, l, 3))
+        ph_true_ca_pos = pred_frames._t.new_zeros((n, l, 3))
+        points_mask = pred_frames._t.new_zeros((n, l,))
+        # fill placeholders with points and masks
         for i, ni in enumerate(asym_ids):
             local_perm_idxs.append(best_global_perm_list[ni.item()])
-            ni_mask = batch["asym_id"] == ni
-            ni_res_idx = batch["residue_index"][ni_mask]
-            ni_res_idx = ni_res_idx - min_res
-            ph_pred_ca_pos[ni_res_idx, ...] = pred_ca_pos[ni_mask, ...]
-            # TODO: check indexing for true items
-            ph_true_ca_pos[ni_res_idx, ...] = true_ca_poses[ni][ni_mask, ...]
-            ph_pred_ca_mask[ni_res_idx] = pred_ca_mask[ni_mask]
-            ph_true_ca_mask[ni_res_idx] = true_ca_masks[ni][ni_mask]
+            asym_mask = batch["asym_id"] == ni
+            asym_res_idx = batch["residue_index"][asym_mask]
+            ph_pred_ca_pos[i, asym_res_idx - min_res] = pred_frames._t[i, asym_mask].clone()
+            ph_true_ca_pos[i, asym_res_idx - min_res] = true_frames._t[i, asym_mask].clone()
+            points_mask[i, asym_mask] = 1.
 
-        # TODO: include all frames, not just the ones for the symmetric entity
-        # (N, L, 3, 3) -> ((n=N f=L),)
-        frames_pred = Frame.from_3_points(ph_pred_ca_pos.reshape(-1, 3, 3).unbind(dim=-2))
-        frames_true = Frame.from_3_points(ph_true_ca_pos.reshape(-1, 3, 3).unbind(dim=-2))
-        # (N, L) -> ((n=N f=L),)
-        frames_mask = (ph_pred_ca_mask * ph_true_ca_mask).reshape(-1)
-        # (N, L) -> ((n=N, p=L))
-        points_mask = ph_pred_ca_mask * ph_true_ca_mask
+        # include all frames of non-symmetric, already assigned symmetric, and this entity
+        frames_mask_ = (pred_frames_mask * true_frames_mask) * (ref_frames_mask + ent_mask.float()).bool().float()
 
         # cross-matrix and hungarian algorithm finds the best permutation
         # (n=N f=L), (n=N f=L), (n=N, p=L), (n=N, p=L) -> (ni=N, nj=N)
         x_mat = compute_x_fape(
-            pred_frames=frames_pred,
-            target_frames=frames_true,
+            pred_frames=pred_frames,
+            target_frames=true_frames,
             pred_points=ph_pred_ca_pos,
             target_points=ph_true_ca_pos,
-            frames_mask=frames_mask,
+            frames_mask=frames_mask_,
             points_mask=points_mask,
         ).cpu().transpose(-1, -2).numpy()
         rows, cols = linear_sum_assignment(x_mat)
+
+        # update frames_mask to include already assigned frames for the next iteration
+        ref_frames_mask[frames_mask_] = 1.
 
         # remap labels like: labels["ent_mask"] = ph_true_ca_pos[cols][ph_true_ca_mask[cols]]
         global_rows = local_perm_idxs
         global_cols = [local_perm_idxs[c] for c in cols]
         best_global_perm[global_rows] = best_global_perm[global_cols]
 
+    # (N,) -> (2, N)
     ij_label_align = th.stack((best_global_curr, best_global_perm), dim=0).tolist()
     best_labels = merge_labels(
         batch=batch,
