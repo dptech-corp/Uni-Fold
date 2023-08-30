@@ -73,17 +73,6 @@ def multi_chain_perm_align(out: Dict, batch: Dict, labels: List[Dict]) -> Dict:
     WARNING! All keys in `out` have no batch size
     """
     assert isinstance(labels, list)
-    ca_idx = rc.atom_order["CA"]
-
-    # [bsz, nres, d=3]
-    pred_frames = Frame.from_tensor_4x4(out["pred_frame_tensor"])
-    # [bsz, nres]
-    pred_frames_mask = batch["final_atom_mask"][..., [0, 1, 2]].float().prod(dim=-1)
-    # [bsz, nres, d=3]
-    true_frames = Frame.cat([Frame.from_tensor_4x4(l["true_frame_tensor"]) for l in labels], dim=0)
-    # [bsz, nres]
-    true_frames_mask = th.cat([l["frame_mask"] for l in labels], dim=0)
-
     # get all unique chains
     unique_asym_ids = th.unique(batch["asym_id"])
     best_global_curr = th.clone(unique_asym_ids)
@@ -96,6 +85,22 @@ def multi_chain_perm_align(out: Dict, batch: Dict, labels: List[Dict]) -> Dict:
         asym_mask = (batch["asym_id"] == cur_asym_id).bool()
         per_asym_residue_index[int(cur_asym_id)] = batch["residue_index"][asym_mask]
 
+    # Get values to compute cross-matrix, use reference frames
+    true_frames, true_frames_mask = [], []
+    for l, cur_asym_id in zip(labels, unique_asym_ids):
+        asym_res_idx = per_asym_residue_index[int(cur_asym_id)]
+        true_frames.append(Frame.from_tensor_4x4(l["true_frame_tensor"][asym_res_idx]))
+        true_frames_mask.append(l["frame_mask"][asym_res_idx])
+
+    # [bsz, nres, d=3]
+    true_frames = Frame.cat(true_frames, dim=0)
+    # [bsz, nres]
+    true_frames_mask = th.cat(true_frames_mask, dim=0)
+    # [bsz, nres, d=3]
+    pred_frames = Frame.from_tensor_4x4(out["pred_frame_tensor"])
+    # [bsz, nres]
+    pred_frames_mask = batch["final_atom_mask"][..., [0, 1, 2]].float().prod(dim=-1)
+
     # will rename only for every unique structure with symmetric counterparts (works for abab, abb, abbcc, ...)
     unique_ent_ids, unique_ent_counts = th.unique(batch["entity_id"], return_counts=True)
 
@@ -106,7 +111,7 @@ def multi_chain_perm_align(out: Dict, batch: Dict, labels: List[Dict]) -> Dict:
         asym_ids = th.unique(batch["asym_id"][ent_mask])
         if len(asym_ids) == 1:
             asym_mask = batch["asym_id"] == asym_ids[0]
-            ref_frames_mask[asym_mask] = true_frames_mask[asym_mask]
+            ref_frames_mask[asym_mask] = pred_frames_mask[asym_mask]
 
     # rename symmetric chains
     for ent_id, ent_count in zip(unique_ent_ids, unique_ent_counts):
