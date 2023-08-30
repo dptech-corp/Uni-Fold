@@ -42,7 +42,7 @@ def automatic_chunk_size(seq_len, device, is_bf16):
         chunk_size = 32
         block_size = 512
     else:
-        chunk_size = 4
+        chunk_size = 1
         block_size = 256
     return chunk_size, block_size
 

@@ -32,6 +32,7 @@ def colab_inference(
     times: int,
     manual_seed: int,
     device: str = "cuda:0",
+    bf16=False
 ):
 
     if symmetry_group is not None:
@@ -60,6 +61,8 @@ def colab_inference(
     state_dict = torch.load(param_path)["ema"]["params"]
     state_dict = {".".join(k.split(".")[1:]): v for k, v in state_dict.items()}
     model.load_state_dict(state_dict)
+    if bf16:
+        model = model.bfloat16()
     model = model.to(device)
     model.eval()
     model.inference_mode()
@@ -87,7 +90,7 @@ def colab_inference(
         chunk_size, block_size = automatic_chunk_size(
                                     seq_len,
                                     device,
-                                    is_bf16=False,
+                                    is_bf16=bf16,
                                 )
         model.globals.chunk_size = chunk_size
         model.globals.block_size = block_size
