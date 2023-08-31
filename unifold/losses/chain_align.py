@@ -67,7 +67,8 @@ def compute_xx_fape(
             d_pt = d_pt2.add_(1e-5).sqrt()
             # (..., ni, nj, f, ni', nj', p) -> (..., ni, nj, ni', nj')
             if frames_mask is not None or points_mask is not None:
-                x_fape_ij = (d_pt * mask).sum(dim=(-1, -4)) / mask.sum(dim=(-1, -4))
+                mask_ = mask[..., i_:i_+1, j_:j_+1, :, :, :, :]
+                x_fape_ij = (d_pt * mask_).sum(dim=(-1, -4)) / mask_.sum(dim=(-1, -4))
             else:
                 x_fape_ij = d_pt.mean(dim=(-1, -4))
             xx_fape[..., i_, j_, :, :] = x_fape_ij
@@ -138,8 +139,8 @@ def multi_chain_perm_align(out: Dict, batch: Dict, labels: List[Dict]) -> Dict:
             asym_res_idx = batch["residue_index"][asym_mask]
             ph_frames_pred[i, asym_res_idx - min_res] = pred_frames[asym_mask].clone()
             ph_frames_true[i, asym_res_idx - min_res] = true_frames[asym_mask].clone()
-            points_mask[i, asym_res_idx - min_res] = pred_frames_mask[asym_mask]
-            frames_mask[i, asym_res_idx - min_res] = true_frames_mask[asym_mask]
+            points_mask[i, asym_res_idx - min_res] = pred_frames_mask[asym_mask] * true_frames_mask[asym_mask]
+            frames_mask[i, asym_res_idx - min_res] = pred_frames_mask[asym_mask] * true_frames_mask[asym_mask]
 
         # cross-matrix and hungarian algorithm finds the best permutation
         # (n=N, f=L), (n=N, f=L), (n=N, p=L), (n=N, p=L) -> (ni'=N, nj'=N, ni=N, nj=N)
