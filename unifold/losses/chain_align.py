@@ -175,9 +175,9 @@ def multi_chain_perm_align(out: Dict, batch: Dict, labels: List[Dict]) -> Dict:
 
 def merge_labels(
     batch: Dict,
-    per_asym_residue_index: Dict[int: List[int]],
+    per_asym_residue_index: Dict[List],
     labels: List[Dict],
-    align: List[Tuple[int, int]]
+    align: List[Tuple]
 ) -> Dict:
     """ Reorders the labels
 
