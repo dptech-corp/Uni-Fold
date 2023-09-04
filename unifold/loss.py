@@ -221,7 +221,7 @@ class AlphafoldMultimerLoss(AlphafoldLoss):
                     cur_out = {
                         k: out[k][batch_idx]
                         for k in out
-                        if k in {"final_atom_positions", "final_atom_mask"}
+                        if k in {"final_atom_positions", "final_atom_mask", "pred_frame_tensor"}
                     }
                     cur_feature = {k: features[k][batch_idx] for k in features}
                     cur_label = labels[batch_idx]

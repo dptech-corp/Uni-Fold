@@ -86,8 +86,11 @@ def multi_chain_perm_align(out: Dict, batch: Dict, labels: List[Dict]) -> Dict:
     WARNING! All keys in `out` have no batch size
     """
     assert isinstance(labels, list)
-    # get all unique chains
+    # get all unique chains - remove padding tokens with no labels
     unique_asym_ids = th.unique(batch["asym_id"])
+    if len(unique_asym_ids) == len(labels) + 1:
+        unique_asym_ids = th.tensor(list((set(unique_asym_ids.tolist()) - {0}))).to(batch["asym_id"])
+    assert len(unique_asym_ids) == len(labels)
     best_global_curr = th.clone(unique_asym_ids)
     best_global_perm = th.clone(unique_asym_ids)
     best_global_perm_list = best_global_perm.tolist()
@@ -112,7 +115,7 @@ def multi_chain_perm_align(out: Dict, batch: Dict, labels: List[Dict]) -> Dict:
     # [bsz, nres, d=3]
     pred_frames = Frame.from_tensor_4x4(out["pred_frame_tensor"])
     # [bsz, nres]
-    pred_frames_mask = batch["final_atom_mask"][..., [0, 1, 2]].float().prod(dim=-1)
+    pred_frames_mask = batch["atom14_gt_exists"][..., [0, 1, 2]].float().prod(dim=-1)
 
     # rename symmetric chains, (works for abab, abb, abbcc, ...)
     unique_ent_ids = th.unique(batch["entity_id"])
@@ -162,8 +165,9 @@ def multi_chain_perm_align(out: Dict, batch: Dict, labels: List[Dict]) -> Dict:
         global_cols = [local_perm_idxs[c] for c in cols]
         best_global_perm[global_rows] = best_global_perm[global_cols]
 
-    # (N,) -> (2, N)
-    ij_label_align = th.stack((best_global_curr, best_global_perm), dim=0).tolist()
+    # (N,) -> (2, N) and match indices of labels list
+    ij_label_align = th.stack((best_global_curr, best_global_perm), dim=0).long().T
+    ij_label_align = (ij_label_align - ij_label_align.amin()).tolist()
     best_labels = merge_labels(
         batch=batch,
         per_asym_residue_index=per_asym_residue_index,
@@ -175,7 +179,7 @@ def multi_chain_perm_align(out: Dict, batch: Dict, labels: List[Dict]) -> Dict:
 
 def merge_labels(
     batch: Dict,
-    per_asym_residue_index: Dict[List],
+    per_asym_residue_index: Dict,
     labels: List[Dict],
     align: List[Tuple]
 ) -> Dict:
