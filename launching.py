@@ -49,7 +49,9 @@ class UnifoldOptions(BaseModel):
     use_msa: Boolean = Field(default=True)
     num_recycling: Int = Field(default=4, ge=1, le=8)
     num_ensembles: Int = Field(default=2, ge=1, le=5)
-    num_replica: Int = Field(default=1, ge=1, le=1)
+    num_replica: Int = Field(default=1, ge=1, le=5,
+        description="Times of repeatedly running Uni-Fold (with different preprocessing seeds for MSA sampling, etc.)."
+    )
     seed: Int = Field(default=0, ge=0)
     output_dir: OutputDirectory = Field(
         default="./output"
