@@ -115,9 +115,4 @@ ENV/
 test/
 
 # running logs and outputs
-.log
-.pt
-*.tfevents.*
-*.sto
-*.a3m
 nogit/
