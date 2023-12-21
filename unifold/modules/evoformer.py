@@ -26,6 +26,9 @@ from .triangle_multiplication import (
 from unicore.utils import checkpoint_sequential
 
 
+COMPILE_BLOCKS = True
+
+
 class EvoformerIteration(nn.Module):
     def __init__(
         self,
@@ -240,8 +243,7 @@ class EvoformerStack(nn.Module):
         self.blocks = SimpleModuleList()
 
         for _ in range(num_blocks):
-            self.blocks.append(
-                EvoformerIteration(
+            block = EvoformerIteration(
                     d_msa=d_msa,
                     d_pair=d_pair,
                     d_hid_msa_att=d_hid_msa_att,
@@ -258,7 +260,8 @@ class EvoformerStack(nn.Module):
                     eps=eps,
                     _is_extra_msa_stack=_is_extra_msa_stack,
                 )
-            )
+            self.blocks.append(block)
+
         if not self._is_extra_msa_stack:
             self.linear = Linear(d_msa, d_single)
         else:

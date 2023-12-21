@@ -13,10 +13,10 @@ from unicore.modules import (
 )
 
 try:
-    import trident as td
+    from flag_attn import flash_attention
     FLASHV2_AVAILABLE = True
 except ImportError:
-    print(f"Could not import trident. Disabling default flash attention")
+    print(f"Could not import FlagAttention. Disabling default flash attention")
     FLASHV2_AVAILABLE = False
 
 
@@ -89,48 +89,50 @@ class Attention(nn.Module):
         v = self.linear_v(v)
 
         batch_dims = q.shape[:-2]
-
-        if bias is None and TORCH_FLASH:
-            # (b, n, i, (h dim_head)) -> (b, n, h, i, dim_head)
-            q = q.view(*q.shape[:-1], self.num_heads, self.head_dim).transpose(-2, -3).contiguous()
-            k = k.view(*k.shape[:-1], self.num_heads, self.head_dim).transpose(-2, -3).contiguous()
-            v = v.view(*v.shape[:-1], self.num_heads, self.head_dim).transpose(-2, -3)
-            # (b, n, h, i, dim_head), (b, n, h, j, dim_head) -> (b, n, h, i, dim_head)
-            o = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=mask)
-            del q, k, v
+        h = self.num_heads
+        h_d = self.head_dim
 
         # custom kernel for pair bias
-        elif FLASHV2_AVAILABLE and self.head_dim >= 16:
+        if FLASHV2_AVAILABLE and self.head_dim >= 16 and q.shape[-2] != 1:
             # (mask, bias) -> (b, n, h, i, j) -> ((b n), h, i, j)
-            new_bias = mask + bias
+            if bias is not None: 
+                new_bias = mask + bias
+            else: 
+                new_bias = mask
             new_bias.clamp_(min=torch.finfo(new_bias.dtype).min)
             new_bias = new_bias.view(-1, *new_bias.shape[-3:]).contiguous()
 
             # (b, n, i, (h dim_head)) -> ((b n), h, i, dim_head)
-            q = q.view(-1, q.shape[-2], self.num_heads, self.head_dim).transpose(-2, -3).contiguous()
-            k = k.view(-1, k.shape[-2], self.num_heads, self.head_dim).transpose(-2, -3).contiguous()
-            v = v.view(-1, v.shape[-2], self.num_heads, self.head_dim).transpose(-2, -3)
+            q = q.view(-1, q.shape[-2], h, h_d).transpose(-2, -3).contiguous()
+            k = k.view(-1, k.shape[-2], h, h_d).transpose(-2, -3).contiguous()
+            v = v.view(-1, v.shape[-2], h, h_d).transpose(-2, -3).contiguous()
 
             # ((b n), h, i, dim_head) -> ((b n), h, i, dim_head) -> (b, n, h, i dim_head) ; torch for bool mask only
-            o = td.function.scaled_dot_product_attention(q, k, v, attn_mask=new_bias)
+            o = flash_attention(q, k, v, bias=new_bias)
             o = o.view(*batch_dims, *o.shape[-3:])
             del q, k, v
 
-        else:
+        else: 
             # (b, n, i, (h dim_head)) -> (b, n, h, i, dim_head)
-            q = q.view(q.shape[:-1] + (self.num_heads, -1)).transpose(-2, -3).contiguous()
-            k = k.view(k.shape[:-1] + (self.num_heads, -1)).transpose(-2, -3).contiguous()
-            v = v.view(v.shape[:-1] + (self.num_heads, -1)).transpose(-2, -3)
+            q = q.view(*q.shape[:-1], h, h_d).transpose(-2, -3).contiguous()
+            k = k.view(*k.shape[:-1], h, h_d).transpose(-2, -3).contiguous()
+            v = v.view(*v.shape[:-1], h, h_d).transpose(-2, -3)
+            
+            if bias is None and TORCH_FLASH:
+                # (b, n, h, i, dim_head), (b, n, h, j, dim_head) -> (b, n, h, i, dim_head)
+                o = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=mask)
+                del q, k, v
 
-            q *= self.norm
-            # (b, n, h, i, dim_head), (b, n, h, dim_head, j) -> (b, n, h, i, j)
-            attn = torch.matmul(q, k.transpose(-1, -2))
-            del q, k
+            else:
+                q *= self.norm
+                # (b, n, h, i, dim_head), (b, n, h, dim_head, j) -> (b, n, h, i, j)
+                attn = torch.matmul(q, k.transpose(-1, -2))
+                del q, k
 
-            # (b, n, h, i, j) -> (b, n, h, i, j), (b, n, h, j, dim_head) -> (b, n, h, i, dim_head)
-            attn = softmax_dropout(attn, 0, self.training, mask=mask, bias=bias)
-            o = torch.matmul(attn, v)
-            del attn, v
+                # (b, n, h, i, j) -> (b, n, h, i, j), (b, n, h, j, dim_head) -> (b, n, h, i, dim_head)
+                attn = softmax_dropout(attn, 0, self.training, mask=mask, bias=bias)
+                o = torch.matmul(attn, v)
+                del attn, v
 
         # (b, n, h, i, dim_head) -> (b, n, i, h, dim_head) -> (b, n, i, (h dim_head))
         o = o.transpose(-2, -3).contiguous()
