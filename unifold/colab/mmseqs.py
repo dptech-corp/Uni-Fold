@@ -50,6 +50,12 @@ def run_mmseqs2(x, prefix, use_env=True,
 
   def download(ID, path):
     res = requests.get(f'{host_url}/result/download/{ID}')
+    retry = 3
+    while retry > 0 and (not len(res.content)):
+      print(res.headers)    # check returned header
+      time.sleep(1)
+      retry -= 1
+      res = requests.get(f'{host_url}/result/download/{ID}')
     with open(path,"wb") as out: out.write(res.content)
 
   # process input x
@@ -119,6 +125,7 @@ def run_mmseqs2(x, prefix, use_env=True,
           raise Exception(f'MMseqs2 API is giving errors. Please confirm your input is a valid protein sequence. If error persists, please try again an hour later.')
 
       # Download results
+      time.sleep(1)   # in case the download path is empty
       download(ID, tar_gz_file)
 
   # prep list of a3m files
