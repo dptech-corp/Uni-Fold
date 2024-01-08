@@ -61,6 +61,45 @@ class HHSearch:
     def input_format(self) -> str:
         return "a3m"
 
+    def query_with_a3m_file(self, a3m_path: str):
+        with utils.tmpdir_manager() as query_tmp_dir:
+            input_path = a3m_path
+            hhr_path = os.path.join(query_tmp_dir, "output.hhr")
+
+            db_cmd = []
+            for db_path in self.databases:
+                db_cmd.append("-d")
+                db_cmd.append(db_path)
+            cmd = [
+                self.binary_path,
+                "-i",
+                input_path,
+                "-o",
+                hhr_path,
+                "-maxseq",
+                str(self.maxseq),
+            ] + db_cmd
+
+            logging.info('Launching subprocess "%s"', " ".join(cmd))
+            process = subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+            with utils.timing("HHsearch query"):
+                stdout, stderr = process.communicate()
+                retcode = process.wait()
+
+            if retcode:
+                # Stderr is truncated to prevent proto size errors in Beam.
+                raise RuntimeError(
+                    "HHSearch failed:\nstdout:\n%s\n\nstderr:\n%s\n"
+                    % (stdout.decode("utf-8"), stderr[:100_000].decode("utf-8"))
+                )
+
+            with open(hhr_path) as f:
+                hhr = f.read()
+        return hhr
+
+
     def query(self, a3m: str) -> str:
         """Queries the database using HHsearch using a given a3m."""
         with utils.tmpdir_manager() as query_tmp_dir:

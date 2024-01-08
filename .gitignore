@@ -116,3 +116,6 @@ test/
 
 # running logs and outputs
 nogit/
+/out
+/output
+/outputs

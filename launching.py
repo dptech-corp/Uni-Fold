@@ -56,8 +56,9 @@ PARAM_DIR = "/root/params"
 
 class UnifoldOptions(BaseModel):
     sequence: String = Field(
-        min_length=6, max_length=3000,
-        description="Input sequence(s). For multimeric targets, please separate different chains with `;`.",
+        min_length=16,
+        default="MVLSEGEWQLVLHVWAKVEADVAGHGQDILIRLFKSHPETLEKFDRVKHLKTEAEMKASEDLKKHGVTVLTALGAILKKKGHHEAELKPLAQSHATKHKIPIKYLEFISEAIIHVLHSRHPGNFGADAQGAMNKALELFRKDIAAKYKELGYQG",
+        description="Input sequence(s). Each line should contain one prediction target. For multimeric targets, please separate different chains with `;`.",
     )
     name: String = Field(
         default="unifold", min_length=0, max_length=31,

@@ -4,6 +4,7 @@ import time
 import logging
 import os
 import urllib3
+import collections
 
 TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
 DEFAULT_API_SERVER = "https://api.colabfold.com"
@@ -19,22 +20,21 @@ class MMSeqs2API:
         self.host_url = host_url
         self.logger = logger
         if logger is None:
-            logger = logging.getLogger(__name__)
-            logger.setLevel(logging.WARNING)
+            self.logger = logging.getLogger(__name__)
+            self.logger.setLevel(logging.WARNING)
         self.use_tqdm = use_tqdm
         self.max_retries = max_retries
         self.sleep_secs = sleep_secs
     
     def _request(self, query, endpoint, mode):
-        res = requests.post(f'{self.host_url}/{endpoint}', data={'q':query,'mode': mode})
         try:
+            res = requests.post(f'{self.host_url}/{endpoint}', data={'q':query,'mode': mode})
             out = res.json()
         except ValueError:
             self.logger.error(f"Server didn't reply with json: {res.text}")
             out = {"status":"ERROR"}
         except urllib3.exceptions.NewConnectionError as ex:
-            self.logger.error(f"Cannot establish connection to the server. Message:")
-            self.logger.error(str(ex))
+            self.logger.error(f"Cannot establish connection to the server. Message: {str(ex)}")
             out = {"status": "ERROR"}
         return out
 
@@ -46,17 +46,23 @@ class MMSeqs2API:
             self.logger.error(f"Server didn't reply with json: {res.text}")
             out = {"status":"ERROR"}
         except urllib3.exceptions.NewConnectionError as ex:
-            self.logger.error(f"Cannot establish connection to the server. Message:")
-            self.logger.error(str(ex))
+            self.logger.error(f"Cannot establish connection to the server. Message: {str(ex)}")
             out = {"status": "ERROR"}
         return out
 
     def _get_result(self, mmseqs_job_id, output_path):
         try:
-            res = requests.get(f'{self.host_url}/result/download/{mmseqs_job_id}')
+            i = self.max_retries
+            while i > 0:
+                time.sleep(1)
+                res = requests.get(f'{self.host_url}/result/download/{mmseqs_job_id}')
+                if len(res.content): break
+                else: i -= 1
         except urllib3.exceptions.NewConnectionError as ex:
-            self.logger.error(f"Cannot establish connection to the server. Message:")
-            self.logger.error(str(ex))
+            self.logger.error(f"Cannot establish connection to the server. Message: {str(ex)}")
+            return {"status": "ERROR"}
+        if i == 0:
+            self.logger.error(f"MMseqs gives empty response.")
             return {"status": "ERROR"}
         with open(output_path, "wb") as f:
             f.write(res.content)
@@ -75,6 +81,7 @@ class MMSeqs2API:
         max_retries: int = None,
         allow_rewrite: bool = False,
     ):
+        max_retries = self.max_retries or max_retries
         if os.path.exists(output_filename) and not allow_rewrite:
             raise FileExistError(f"{output_filename} exists. If you want to rewrite it, please set allow_rewrite=True.")
 
@@ -128,4 +135,25 @@ class MMSeqs2API:
                         return
         
         raise MMSeqs2ServerError(f"Cannot correctly obtain results from MMSeq2 server after {n_retry} retries.")
+
+
+    def get_templates(self, template_m8_path, output_dir):
+        templates = collections.defaultdict(list)
+        for line in open(template_m8_path,"r"):
+            p = line.rstrip().split()
+            sid,pdb,qid,e_value = p[0],p[1],p[2],p[10]
+            templates[sid].append(pdb)
+
+        template_paths = {}
+        for sid, pdbs in tqdm(templates.items(), total=len(templates)):
+            sub_dir = os.path.join(output_dir, sid)
+            if not os.path.isdir(sub_dir):
+                os.makedirs(sub_dir)
+                pdbs = ",".join(pdbs[:20])
+                os.system(f"curl -s -L {self.host_url}/template/{pdbs} | tar xzf - -C {sub_dir}/")
+                os.system(f"cp {sub_dir}/pdb70_a3m.ffindex {sub_dir}/pdb70_cs219.ffindex")
+                os.system(f"touch {sub_dir}/pdb70_cs219.ffdata")
+            template_paths[sid] = sub_dir
+
+        return template_paths
 

@@ -1,6 +1,7 @@
-from unifold.mmseqs import MMSeqs2API
+from unifold.launching.mmseqs_api import MMSeqs2API
 import argparse
 import logging
+import os
 
 logger = logging.getLogger("run_mmseqs2_api")
 logger.setLevel(logging.INFO)
@@ -13,7 +14,13 @@ def main(args):
         args.output_tgz,
         args.use_pair,
         args.max_retries,
-        allow_rewrite=False,
+        allow_rewrite=True,
+    )
+    os.system("mkdir -p test_out")
+    os.system(f"tar zxvf {args.output_tgz} -C test_out")
+    api.get_templates(
+        "test_out/pdb70.m8",
+        "test_out/templs"
     )
 
 if __name__ == "__main__":
