@@ -4,6 +4,19 @@
 
 [[UF-Symmetry bioRxiv](https://www.biorxiv.org/content/10.1101/2022.08.30.505833)]
 
+
+---
+
+## NEWEST in Uni-Fold
+
+[2023-09-21] Quick try of Uni-Fold at [Bohrium Apps](https://app.bohrium.dp.tech/uni-fold/)! Check [here](https://github.com/dptech-corp/Uni-Fold/issues/131) for details.
+
+[2022-11-15] We released the full dataset used to train Uni-Fold.
+
+[2022-09-06] We released the code of Uni-Fold Symmetry (UF-Symmetry), a fast solution to fold large symmetric protein complexes. The details of UF-Symmetry can be found in [bioRxiv: Uni-Fold Symmetry: Harnessing Symmetry in Folding Large Protein Complexes](https://doi.org/10.1101/2022.08.30.505833). The code of UF-Symmetry is concentrated in the folder [`unifold/symmetry`](./unifold/symmetry/).
+
+---
+
 We proudly present Uni-Fold as a thoroughly open-source platform for developing protein models beyond [AlphaFold](https://github.com/deepmind/alphafold/). Uni-Fold introduces the following features:
 
 - Reimplemented AlphaFold and AlphaFold-Multimer models in PyTorch framework. **This is currently the first (if any else) open-source repository that supports training AlphaFold-Multimer.**
@@ -43,14 +56,6 @@ Figure 3. Uni-Fold is to our knowledge the fastest implemetation of AlphaFold.
 &nbsp;
 
 The name Uni-Fold is inherited from our previous repository, [Uni-Fold-JAX](https://github.com/dptech-corp/Uni-Fold-jax). First released on Dec 8 2021, Uni-Fold-JAX was the first open-source project (with training scripts) that successfully reproduced the from-scratch training of AlphaFold. Until recently, Uni-Fold-JAX is still the only project that supports training of the original AlphaFold implementation in JAX framework. Due to efficiency and collaboration considerations, we moved from JAX to PyTorch on Jan 2022, based on which we further developed the multimer models.
-
----
-
-## NEWEST in Uni-Fold
-
-[2022-11-15] We released the full dataset used to train Uni-Fold.
-
-[2022-09-06] We released the code of Uni-Fold Symmetry (UF-Symmetry), a fast solution to fold large symmetric protein complexes. The details of UF-Symmetry can be found in [bioRxiv: Uni-Fold Symmetry: Harnessing Symmetry in Folding Large Protein Complexes](https://doi.org/10.1101/2022.08.30.505833). The code of UF-Symmetry is concentrated in the folder [`unifold/symmetry`](./unifold/symmetry/).
 
 ![case](./img/uf-symmetry-effect.gif)
 <center>
