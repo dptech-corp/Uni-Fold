@@ -26,6 +26,7 @@ from dp.launching.typing import (
     String,
     Boolean,
     OutputDirectory,
+    InputFilePath,
 )
 from dp.launching.cli import (
     to_runner,
@@ -66,9 +67,14 @@ PARAM_DIR = "/root/params"
 
 
 class UnifoldOptions(BaseModel):
+    batch_sequences: InputFilePath = Field(
+        default=None,
+        title="Input batch of sequences. Skip this step if only one query is needed.",
+        description="Each line should contain only the sequence(s) of one prediction target. For multimeric targets, please separate different chains with `;`."
+    )
     sequence: String = Field(
         default="MVLSEGEWQLVLHVWAKVEADVAGHGQDILIRLFKSHPETLEKFDRVKHLKTEAEMKASEDLKKHGVTVLTALGAILKKKGHHEAELKPLAQSHATKHKIPIKYLEFISEAIIHVLHSRHPGNFGADAQGAMNKALELFRKDIAAKYKELGYQG",
-        description="Input sequence(s). Each line should contain one prediction target. For multimeric targets, please separate different chains with `;`.",
+        description="Input sequence(s). For multimeric targets, please separate different chains with `;`. Ignored if a file of batched sequences is specified.",
     )
     symmetry_group: String = Field(default="C1")
     num_replica: Int = Field(default=1, ge=1, le=5,
@@ -98,12 +104,26 @@ class UnifoldOptions(BaseModel):
 
 
 def main(opts: UnifoldOptions) -> int:
+    # input sanity check. TODO use validator?
     if ";" in opts.sequence and not opts.use_multimer:
         raise ValueError("must set `use_multimer` as TRUE if multimeric cases are inputted.")
     output_dir = opts.output_dir.get_full_path()
+
+    print("welcome to use Uni-Fold.")
+    if opts.batch_sequences is not None:
+        batch_sequences_path = opts.batch_sequences.get_full_path()
+        sequences = open(batch_sequences_path).read()
+        print(f"batched sequence query provided.")
+        if opts.sequence:
+            print(f"ignore single query `{opts.sequence[:5]}...` .")
+    else:
+        sequences = opts.sequence
+        print("batch sequence query not provided. Use single query sequence.")
+    print("processing...", flush=True)
+
     # parse queries
     all_targets, seqid_map = parse_batch_inputs(
-        opts.sequence,
+        sequences,
         min_length=0,
         max_length=3000,
     )
@@ -113,7 +133,8 @@ def main(opts: UnifoldOptions) -> int:
     symmetry_group = valid_symmetry_group(
         opts.symmetry_group,
     )
-    print(f"symmetry group: {symmetry_group} (`C1` -> None)")
+    print(f"symmetry group: {symmetry_group} (`C1` -> None)", flush=True)
+
     # mmseqs
     feat_dir = get_msa_and_templates(
         seqid_map,
@@ -123,7 +144,7 @@ def main(opts: UnifoldOptions) -> int:
         mmseqs_api=None,
         chunk_size=100,
     )
-    print("mmseqs features prepared.")
+    print("mmseqs features prepared.", flush=True)
     # model inference
     result_out_dir = os.path.join(output_dir, "prediction")
     launching_inference(
@@ -139,7 +160,7 @@ def main(opts: UnifoldOptions) -> int:
         manual_seed=opts.seed,
         device="cuda",
     )
-    print("all targets done.")
+    print("all targets done.", flush=True)
     return
 
 

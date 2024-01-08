@@ -94,6 +94,16 @@ def load_single_feature(
                 "deletion_matrix_all_seq",
             ]:
                 chain_feature[key] = all_seq_feature[key]
+    else:
+        if not is_monomer:
+            # use msa features as pseudo all_seq_features
+            n_msa = chain_feature["msa"].shape[0]
+            all_seq_feature = {
+                k: chain_feature[k] for k in ("msa", "deletion_matrix")
+            }
+            all_seq_feature["msa_species_identifiers"] = np.array(["".encode("utf-8") for i in range(n_msa)])
+            all_seq_feature = utils.convert_all_seq_feature(all_seq_feature)
+            chain_feature.update(copy.deepcopy(all_seq_feature))
 
     return chain_feature
 
