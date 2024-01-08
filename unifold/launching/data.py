@@ -138,9 +138,22 @@ def get_msa_and_templates(
     for d in (raw_dir, msa_dir, tmpl_dir, feat_dir):
         os.makedirs(d, exist_ok=True)
 
-    # make text output files
+    # filter for seqs that need msa
     if use_msa:
-        chunked_fastas = make_chunked_fastas(seqid_map, chunk_size)
+        mmseq_seqid_map = {}
+        nomsa_seqid_map = {}
+        for k, v in seqid_map.items():
+            if len(v) > 16:
+                mmseq_seqid_map[k] = v
+            else:
+                nomsa_seqid_map[k] = v
+    else:
+        mmseq_seqid_map = {}
+        nomsa_seqid_map = seqid_map
+
+    # make text output files
+    if len(mmseq_seqid_map):
+        chunked_fastas = make_chunked_fastas(mmseq_seqid_map, chunk_size)
         for ci, fasta in enumerate(chunked_fastas):
             # dump query fasta
             open(osp.join(raw_dir, f"query_{ci:02d}.fasta"), "w").write(fasta)
@@ -159,11 +172,11 @@ def get_msa_and_templates(
                 )
         # parse all a3m files
         parse_mmseqs_a3ms(raw_dir, msa_dir)
-    else:
-        # make pseudo a3m files
-        for sid, seq in seqid_map.items():
-            with open(osp.join(msa_dir, f"{sid}.a3m"), "w") as f:
-                f.write(f">{sid}\n{seq}\n")
+
+    # make pseudo a3m files for nomsa targets
+    for sid, seq in nomsa_seqid_map.items():
+        with open(osp.join(msa_dir, f"{sid}.a3m"), "w") as f:
+            f.write(f">{sid}\n{seq}\n")
 
     # make feature files
     for sid, seq in tqdm(seqid_map.items(), total=len(seqid_map)):
