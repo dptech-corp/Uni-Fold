@@ -123,7 +123,7 @@ def launching_inference(
     all_targets: List[List[str]],
     feat_dir: str,
     param_dir: str,
-    output_dir: str,
+    prediction_dir: str,
     use_multimer: bool,
     symmetry_group: str,
     max_recycling_iters: int,
@@ -167,7 +167,8 @@ def launching_inference(
     for seqids in all_targets:
         target_id = next(jidgen)
         # data path is based on target_name
-        cur_output_dir = osp.join(output_dir, target_id)
+        target_dir = osp.join(prediction_dir, target_id)
+        os.makedirs(target_dir, exist_ok=True)
 
         print("start to predict {}".format(target_id))
         plddts = {}
@@ -210,7 +211,7 @@ def launching_inference(
             if mean_ptm is not None:
                 ptms[cur_save_name] = str(mean_ptm)
 
-            with open(os.path.join(cur_output_dir, cur_save_name + '.pdb'), "w") as f:
+            with open(os.path.join(target_dir, cur_save_name + '.pdb'), "w") as f:
                 f.write(protein.to_pdb(cur_protein))
 
             cur_score = mean_ptm if mean_ptm is not None else mean_plddt
@@ -224,12 +225,12 @@ def launching_inference(
 
         jobname = f"{target_id}_{model_name}"
         print("plddts", plddts)
-        json.dump(plddts, open(os.path.join(cur_output_dir, f"{jobname}_plddt.json"), "w"), indent=1)
-        best_save_name = jobname + f"_best_plddt={best_result['plddt'][:6]}"
+        json.dump(plddts, open(os.path.join(target_dir, f"{jobname}_plddt.json"), "w"), indent=1)
+        best_save_name = jobname + f"_best_plddt={best_result['plddt']:.6f}"
         if ptms:
             print("ptms", ptms)
-            json.dump(ptms, open(os.path.join(output_dir, f"{jobname}_ptm.json"), "w"), indent=1)
-            best_save_name += f"_ptm={best_result['ptm'][:6]}"
+            json.dump(ptms, open(os.path.join(prediction_dir, f"{jobname}_ptm.json"), "w"), indent=1)
+            best_save_name += f"_ptm={best_result['ptm']:.6f}"
 
-        with open(os.path.join(cur_output_dir, f'{best_save_name}.pdb'), "w") as f:
+        with open(os.path.join(target_dir, f'{best_save_name}.pdb'), "w") as f:
             f.write(protein.to_pdb(best_result["protein"]))

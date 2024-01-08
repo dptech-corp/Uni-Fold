@@ -100,6 +100,7 @@ class UnifoldOptions(BaseModel):
 def main(opts: UnifoldOptions) -> int:
     if ";" in opts.sequence and not opts.use_multimer:
         raise ValueError("must set `use_multimer` as TRUE if multimeric cases are inputted.")
+    output_dir = opts.output_dir.get_full_path()
     # parse queries
     all_targets, seqid_map = parse_batch_inputs(
         opts.sequence,
@@ -116,7 +117,7 @@ def main(opts: UnifoldOptions) -> int:
     # mmseqs
     feat_dir = get_msa_and_templates(
         seqid_map,
-        opts.output_dir.get_full_path(),
+        output_dir,
         use_msa=opts.use_msa,
         use_templates=opts.use_template,
         mmseqs_api=None,
@@ -124,11 +125,12 @@ def main(opts: UnifoldOptions) -> int:
     )
     print("mmseqs features prepared.")
     # model inference
+    result_out_dir = os.path.join(output_dir, "prediction")
     launching_inference(
         all_targets,
         feat_dir=feat_dir,
         param_dir=PARAM_DIR,
-        output_dir=opts.output_dir.get_full_path(),
+        prediction_dir=result_out_dir,
         use_multimer=opts.use_multimer,
         symmetry_group=symmetry_group,
         max_recycling_iters=opts.num_recycling,
