@@ -32,6 +32,7 @@ def colab_inference(
     times: int,
     manual_seed: int,
     device: str = "cuda:0",
+    bf16=False
 ):
 
     if symmetry_group is not None:
@@ -60,6 +61,8 @@ def colab_inference(
     state_dict = torch.load(param_path)["ema"]["params"]
     state_dict = {".".join(k.split(".")[1:]): v for k, v in state_dict.items()}
     model.load_state_dict(state_dict)
+    if bf16:
+        model = model.bfloat16()
     model = model.to(device)
     model.eval()
     model.inference_mode()
@@ -87,7 +90,7 @@ def colab_inference(
         chunk_size, block_size = automatic_chunk_size(
                                     seq_len,
                                     device,
-                                    is_bf16=False,
+                                    is_bf16=bf16,
                                 )
         model.globals.chunk_size = chunk_size
         model.globals.block_size = block_size
@@ -139,7 +142,9 @@ def colab_inference(
         plddts[cur_save_name] = str(mean_plddt)
         if is_multimer and symmetry_group is None:
             ptms[cur_save_name] = str(np.mean(out["iptm+ptm"]))
-        with open(os.path.join(output_dir, cur_save_name + '.pdb'), "w") as f:
+        
+        best_results_path = os.path.join(output_dir, cur_save_name + '.pdb')
+        with open(best_results_path, "w") as f:
             f.write(protein.to_pdb(cur_protein))
 
         if is_multimer and symmetry_group is None:
@@ -148,14 +153,16 @@ def colab_inference(
                 best_result = {
                     "protein": cur_protein,
                     "plddt": out["plddt"],
-                    "pae": out["predicted_aligned_error"]
+                    "pae": out["predicted_aligned_error"],
+                    'best_results_path': best_results_path,
                 }
         else:
             if mean_plddt>best_score:
                 best_result = {
                     "protein": cur_protein,
                     "plddt": out["plddt"],
-                    "pae": None
+                    "pae": None,
+                    'best_results_path': best_results_path,
                 }
 
     print("plddts", plddts)

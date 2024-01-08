@@ -1,7 +1,14 @@
 import hashlib
 import os
 from typing import Dict, List, Sequence, Tuple, Union, Any, Optional
-
+import pickle
+import gzip
+from pathlib import Path
+from unifold.msa import pipeline, parsers
+from unifold.data.protein import PDB_CHAIN_IDS
+from unifold.data.utils import compress_features
+from unifold.msa.utils import divide_multi_chains
+from unifold.colab.mmseqs import get_msa_and_templates
 
 from unifold.data import residue_constants, protein
 from unifold.msa.utils import divide_multi_chains
@@ -123,3 +130,84 @@ def load_feature_for_one_target(
         )
     batch = UnifoldDataset.collater([batch])
     return batch
+
+
+def get_features(
+    jobname: str,
+    target_id: str, 
+    sequences: List[str], 
+    output_dir_base: str,
+    is_multimer: bool,
+    msa_mode: str,
+    use_templates: str,
+    ):
+    
+    # Validate the input.
+    
+    descriptions = ['> '+target_id+' seq'+str(ii) for ii in range(len(sequences))]
+
+    if is_multimer:
+        divide_multi_chains(target_id, output_dir_base, sequences, descriptions)
+        
+    s = []
+    for des, seq in zip(descriptions, sequences):
+        s += [des, seq]
+
+    unique_sequences = []
+    [unique_sequences.append(x) for x in sequences if x not in unique_sequences]
+
+    if len(unique_sequences)==1:
+        homooligomers_num = len(sequences)
+    else:
+        homooligomers_num = 1
+        
+    with open(f"{output_dir_base}/{jobname}.fasta", "w") as f:
+        f.write("\n".join(s))
+
+    result_dir = Path(output_dir_base)
+    output_dir = os.path.join(output_dir_base, target_id)
+
+    (
+    unpaired_msa,
+    paired_msa,
+    template_results,
+    ) = get_msa_and_templates(
+    target_id,
+    unique_sequences,
+    result_dir=result_dir,
+    msa_mode=msa_mode,
+    use_templates=use_templates,
+    homooligomers_num = homooligomers_num
+    )
+
+    for idx, seq in enumerate(unique_sequences):
+        chain_id = PDB_CHAIN_IDS[idx]
+        sequence_features = pipeline.make_sequence_features(
+                sequence=seq, description=f'> {jobname} seq {chain_id}', num_res=len(seq)
+            )
+        monomer_msa = parsers.parse_a3m(unpaired_msa[idx])
+        msa_features = pipeline.make_msa_features([monomer_msa])
+        template_features = template_results[idx]
+        feature_dict = {**sequence_features, **msa_features, **template_features}
+        feature_dict = compress_features(feature_dict)
+        features_output_path = os.path.join(
+                output_dir, "{}.feature.pkl.gz".format(chain_id)
+            )
+        pickle.dump(
+            feature_dict, 
+            gzip.GzipFile(features_output_path, "wb"), 
+            protocol=4
+            )
+        if is_multimer:
+            multimer_msa = parsers.parse_a3m(paired_msa[idx])
+            pair_features = pipeline.make_msa_features([multimer_msa])
+            pair_feature_dict = compress_features(pair_features)
+            uniprot_output_path = os.path.join(
+                output_dir, "{}.uniprot.pkl.gz".format(chain_id)
+            )
+            pickle.dump(
+                pair_feature_dict,
+                gzip.GzipFile(uniprot_output_path, "wb"),
+                protocol=4,
+            )
+    return output_dir
