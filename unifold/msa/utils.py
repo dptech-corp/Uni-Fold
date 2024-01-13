@@ -9,6 +9,7 @@ from unifold.data import protein
 def get_chain_id_map(
     sequences: Sequence[str],
     descriptions: Sequence[str],
+    fasta_name: str
 ):
     """
     Makes a mapping from PDB-format chain ID to sequence and description,
@@ -20,15 +21,16 @@ def get_chain_id_map(
             unique_seqs.append(seq)
 
     chain_id_map = {
-        chain_id: {"descriptions": [], "sequence": seq}
+        f"{fasta_name}_{chain_id}": {"descriptions": [], "sequence": seq}
         for chain_id, seq in zip(protein.PDB_CHAIN_IDS, unique_seqs)
     }
     chain_order = []
 
     for seq, des in zip(sequences, descriptions):
         chain_id = protein.PDB_CHAIN_IDS[unique_seqs.index(seq)]
-        chain_id_map[chain_id]["descriptions"].append(des)
-        chain_order.append(chain_id)
+        chain_name = f"{fasta_name}_{chain_id}"
+        chain_id_map[chain_name]["descriptions"].append(des)
+        chain_order.append(chain_name)
 
     return chain_id_map, chain_order
 
@@ -54,7 +56,7 @@ def divide_multi_chains(
             f"Got {len(sequences)} chains."
         )
 
-    chain_id_map, chain_order = get_chain_id_map(sequences, descriptions)
+    chain_id_map, chain_order = get_chain_id_map(sequences, descriptions, fasta_name)
 
     output_dir = os.path.join(output_dir_base, fasta_name)
     if not os.path.exists(output_dir):
@@ -75,7 +77,7 @@ def divide_multi_chains(
     temp_names = []
     temp_paths = []
     for chain_id in chain_id_map.keys():
-        temp_name = fasta_name + "_{}".format(chain_id)
+        temp_name = chain_id
         temp_path = os.path.join(output_dir, temp_name + ".fasta")
         des = "chain_{}".format(chain_id)
         seq = chain_id_map[chain_id]["sequence"]

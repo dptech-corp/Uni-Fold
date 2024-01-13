@@ -170,7 +170,7 @@ def generate_pkl_features(
 
     # Get features.
     features_output_path = os.path.join(
-        output_dir, "{}.feature.pkl.gz".format(chain_id)
+        output_dir, "{}.feature.pkl.gz".format(fasta_name)
     )
     if not os.path.exists(features_output_path):
         t_0 = time.time()
@@ -184,7 +184,7 @@ def generate_pkl_features(
     # Get uniprot
     if use_uniprot:
         uniprot_output_path = os.path.join(
-            output_dir, "{}.uniprot.pkl.gz".format(chain_id)
+            output_dir, "{}.uniprot.pkl.gz".format(fasta_name)
         )
         if not os.path.exists(uniprot_output_path):
             t_0 = time.time()
@@ -201,7 +201,7 @@ def generate_pkl_features(
 
     logging.info("Final timings for %s: %s", fasta_name, timings)
 
-    timings_output_path = os.path.join(output_dir, "{}.timings.json".format(chain_id))
+    timings_output_path = os.path.join(output_dir, "{}.timings.json".format(fasta_name))
     with open(timings_output_path, "w") as f:
         f.write(json.dumps(timings, indent=4))
 
@@ -277,8 +277,8 @@ def main(argv):
             os.makedirs(output_dir)
         chain_order_path = os.path.join(output_dir, "chains.txt")
         with open(chain_order_path, "w") as f:
-            f.write("A")
-        fasta_names = [fasta_name]
+            f.write(f"{fasta_name}_A")
+        fasta_names = [f"{fasta_name}_A"]
         fasta_paths = [fasta_path]
 
     # Check for duplicate FASTA file names.

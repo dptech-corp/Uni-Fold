@@ -23,7 +23,9 @@ def nonensembled_fns(common_cfg, mode_cfg):
         ]
     )
     operators.append(
-        data_ops.make_hhblits_profile_v2 if v2_feature else data_ops.make_hhblits_profile
+        data_ops.make_hhblits_profile_v2
+        if v2_feature
+        else data_ops.make_hhblits_profile
     )
     if common_cfg.use_templates:
         operators.extend(
@@ -48,7 +50,57 @@ def nonensembled_fns(common_cfg, mode_cfg):
 
     operators.append(data_ops.make_atom14_masks)
     operators.append(data_ops.make_target_feat)
+   
 
+    return operators
+
+
+def single_fns(common_cfg, mode_cfg, crop_and_fix_size_seed):
+    """Input pipeline data transformers that are for single sequence"""
+    v2_feature = common_cfg.v2_feature
+    operators = []
+
+    operators.extend(
+        [
+            data_ops.cast_to_64bit_ints,
+            data_ops.squeeze_features,
+            data_ops.make_seq_mask,
+        ]
+    )
+
+    operators.append(data_ops.make_atom14_masks)
+    operators.append(data_ops.make_target_feat)
+
+    crop_feats = dict(common_cfg.features)
+    if mode_cfg.fixed_size:
+        if mode_cfg.crop:
+            if common_cfg.is_multimer:
+                crop_fn = data_ops.crop_to_size_multimer(
+                    crop_size=mode_cfg.crop_size,
+                    shape_schema=crop_feats,
+                    seed=crop_and_fix_size_seed,
+                    spatial_crop_prob=mode_cfg.spatial_crop_prob,
+                    ca_ca_threshold=mode_cfg.ca_ca_threshold,
+                )
+            else:
+                crop_fn = data_ops.crop_to_size_single(
+                    crop_size=mode_cfg.crop_size,
+                    shape_schema=crop_feats,
+                    seed=crop_and_fix_size_seed,
+                )
+            operators.append(crop_fn)
+
+        operators.append(data_ops.select_feat(crop_feats))
+
+        operators.append(
+            data_ops.make_fixed_size(
+                crop_feats,
+                None,
+                None,
+                mode_cfg.crop_size,
+                None,
+            )
+        )
     return operators
 
 
@@ -204,7 +256,41 @@ def process_features(tensors, common_cfg, mode_cfg):
     # add a dummy dim to align with recycling features
     tensors = {k: torch.stack([tensors[k]], dim=0) for k in tensors}
     tensors.update(ensemble_tensors)
+    tensors["num_ensembles"] = torch.tensor([num_ensembles])
     return tensors
+
+
+def process_features_single(tensors, common_cfg, mode_cfg):
+    """Based on the config, apply filters and transformations to the data."""
+    is_distillation = bool(tensors.get("is_distillation", 0))
+    multimer_mode = common_cfg.is_multimer
+    crop_and_fix_size_seed = int(tensors["crop_and_fix_size_seed"])
+
+    def wrap_ensemble_fn(data, i):
+        """Function to be mapped over the ensemble dimension."""
+        d = data.copy()
+        return d
+
+    nonensembled = single_fns(common_cfg, mode_cfg, crop_and_fix_size_seed)
+
+    if mode_cfg.supervised and (not multimer_mode or is_distillation):
+        nonensembled.extend(label_transform_fn())
+
+    tensors = compose(nonensembled)(tensors)
+
+    num_recycling = int(tensors["num_recycling_iters"]) + 1
+    num_ensembles = mode_cfg.num_ensembles
+
+    ensemble_tensors = map_fn(
+        lambda x: wrap_ensemble_fn(tensors, x),
+        torch.arange(num_ensembles),
+    )
+    ensemble_tensors["num_recycling_iters"] = ensemble_tensors["num_recycling_iters"][
+        0:1
+    ]
+    ensemble_tensors["seq_length"] = ensemble_tensors["seq_length"][0:1]
+    ensemble_tensors["num_ensembles"] = torch.tensor([num_ensembles])
+    return ensemble_tensors
 
 
 @data_ops.curry1
@@ -223,7 +309,7 @@ def pad_then_stack(
         for v in values:
             if v.shape[0] < size:
                 res = values[0].new_zeros(size, *v.shape[1:])
-                res[:v.shape[0], ...] = v
+                res[: v.shape[0], ...] = v
             else:
                 res = v
             new_values.append(res)
@@ -231,14 +317,13 @@ def pad_then_stack(
         new_values = values
     return torch.stack(new_values, dim=0)
 
+
 def map_fn(fun, x):
     ensembles = [fun(elem) for elem in x]
     features = ensembles[0].keys()
     ensembled_dict = {}
     for feat in features:
-        ensembled_dict[feat] = pad_then_stack(
-            [dict_i[feat] for dict_i in ensembles]
-        )
+        ensembled_dict[feat] = pad_then_stack([dict_i[feat] for dict_i in ensembles])
     return ensembled_dict
 
 
