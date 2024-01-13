@@ -40,10 +40,10 @@ class AlphafoldLoss(UnicoreLoss):
         # return config in model.
         out, config = model(batch)
         num_recycling = batch["msa_feat"].shape[0]
-        
+
         # remove recyling dim
         batch = tensor_tree_map(lambda t: t[-1, ...], batch)
-        
+
         loss, sample_size, logging_output = self.loss(out, batch, config)
         logging_output["num_recycling"] = num_recycling
         return loss, sample_size, logging_output
@@ -57,7 +57,7 @@ class AlphafoldLoss(UnicoreLoss):
         if "renamed_atom14_gt_positions" not in out.keys():
             batch.update(
                 compute_renamed_ground_truth(batch, out["sm"]["positions"]))
-        
+
         loss_dict = {}
         loss_fns = {
             "chain_centre_mass": lambda: chain_centre_mass_loss(
@@ -143,11 +143,11 @@ class AlphafoldLoss(UnicoreLoss):
         with torch.no_grad():
             seq_len = torch.sum(batch["seq_mask"].float(), dim=-1)
             seq_length_weight = seq_len**0.5
-        
+
         assert (
             len(seq_length_weight.shape) == 1 and seq_length_weight.shape[0] == bsz
         ), seq_length_weight.shape
-        
+
         for loss_name, loss_fn in loss_fns.items():
             weight = config[loss_name].weight
             if weight > 0.:
@@ -159,7 +159,7 @@ class AlphafoldLoss(UnicoreLoss):
                 if any(torch.isnan(loss)) or any(torch.isinf(loss)):
                     logging.warning(f"{loss_name} loss is NaN. Skipping...")
                     loss = loss.new_tensor(0.0, requires_grad=True)
-                
+
                 cum_loss = cum_loss + weight * loss
 
         for key in loss_dict:
@@ -208,10 +208,10 @@ class AlphafoldMultimerLoss(AlphafoldLoss):
         # return config in model.
         out, config = model(features)
         num_recycling = features["msa_feat"].shape[0]
-        
+
         # remove recycling dim
         features = tensor_tree_map(lambda t: t[-1, ...], features)
-        
+
         # perform multi-chain permutation alignment.
         if labels:
             with torch.no_grad():
@@ -221,7 +221,7 @@ class AlphafoldMultimerLoss(AlphafoldLoss):
                     cur_out = {
                         k: out[k][batch_idx]
                         for k in out
-                        if k in {"final_atom_positions", "final_atom_mask"}
+                        if k in {"final_atom_positions", "final_atom_mask", "pred_frame_tensor"}
                     }
                     cur_feature = {k: features[k][batch_idx] for k in features}
                     cur_label = labels[batch_idx]
@@ -230,12 +230,12 @@ class AlphafoldMultimerLoss(AlphafoldLoss):
                     )
                     new_labels.append(cur_new_labels)
             new_labels = data_utils.collate_dict(new_labels, dim=0)
-            
+
             # check for consistency of label and feature.
             assert (new_labels["aatype"] == features["aatype"]).all()
             features.update(new_labels)
 
         loss, sample_size, logging_output = self.loss(out, features, config)
         logging_output["num_recycling"] = num_recycling
-        
+
         return loss, sample_size, logging_output

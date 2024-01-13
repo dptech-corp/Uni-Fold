@@ -164,6 +164,14 @@ class Rotation:
     ) -> Rotation:
         return Rotation(mat=self._mat.to(device=device, dtype=dtype))
 
+    @property
+    def device(self) -> torch.device:
+        return self._mat.device
+
+    @property
+    def dtype(self) -> torch.dtype:
+        return self._mat.dtype
+
     def type(self, dtype: Optional[torch.dtype]) -> Rotation:
         return Rotation(mat=self._mat.type(dtype))
 
@@ -432,6 +440,11 @@ class Frame:
         return Frame(self._r.cuda(), self._t.cuda())
 
     @property
+    def device(self) -> torch.device:
+        assert self._r.device == self._t.device
+        return self._t.device
+
+    @property
     def dtype(self) -> torch.dtype:
         assert self._r.dtype == self._t.dtype
         return self._r.dtype
@@ -537,3 +550,11 @@ class Quaternion:
 
     def stop_rot_gradient(self) -> Quaternion:
         return Quaternion(self._q.detach(), self._t)
+
+    @property
+    def device(self) -> torch.device:
+        return self._q.device
+
+    @property
+    def dtype(self) -> torch.dtype:
+        return self._q.dtype
