@@ -26,6 +26,11 @@ from .triangle_multiplication import (
 from unicore.utils import checkpoint_sequential
 
 
+import torch.distributed as dist
+from unicore.distributed.comm_group import scg
+from unicore.distributed import bp
+
+
 class EvoformerIteration(nn.Module):
     def __init__(
         self,
@@ -40,7 +45,7 @@ class EvoformerIteration(nn.Module):
         transition_n: int,
         msa_dropout: float,
         pair_dropout: float,
-        outer_product_mean_first: bool,
+        outer_product_mean_pos: bool,
         inf: float,
         eps: float,
         _is_extra_msa_stack: bool = False,
@@ -48,7 +53,7 @@ class EvoformerIteration(nn.Module):
         super(EvoformerIteration, self).__init__()
 
         self._is_extra_msa_stack = _is_extra_msa_stack
-        self.outer_product_mean_first = outer_product_mean_first
+        self.outer_product_mean_pos = outer_product_mean_pos
 
         self.msa_att_row = MSARowAttentionWithPairBias(
             d_msa=d_msa,
@@ -120,94 +125,196 @@ class EvoformerIteration(nn.Module):
         msa_mask: torch.Tensor,
         pair_mask: torch.Tensor,
         msa_row_attn_mask: torch.Tensor,
-        msa_col_attn_mask: Optional[torch.Tensor],
+        msa_col_attn_mask: torch.Tensor,
         tri_start_attn_mask: torch.Tensor,
         tri_end_attn_mask: torch.Tensor,
         chunk_size: Optional[int] = None,
         block_size: Optional[int] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
 
-        if self.outer_product_mean_first:
-            z = residual(
-                z, self.outer_product_mean(m, mask=msa_mask, chunk_size=chunk_size),
-                self.training
-            )
+        if scg.get_bp_world_size() > 1:
 
-        m = bias_dropout_residual(
-            self.msa_att_row,
-            m,
-            self.msa_att_row(
-                m, z=z, attn_mask=msa_row_attn_mask, chunk_size=chunk_size
-            ),
-            self.row_dropout_share_dim,
-            self.msa_dropout,
-            self.training,
-        )
-        if self._is_extra_msa_stack:
-            m = residual(
-                m, self.msa_att_col(m, mask=msa_mask, chunk_size=chunk_size),
-                self.training
-            )
+
+            assert self.outer_product_mean_pos == 'end', "Branch Parallellism only support outer_product_mean_pos == 'end'"
+
+            # Note(GuoxiaWang): add zeros trigger the status of stop_gradient=False within recompute context.
+            z = z + torch.zeros_like(z)
+            m = m + torch.zeros_like(m)
+
+            # # Note(GuoxiaWang): reduce the pair_act's gradient from msa branch and pair branch
+            if z.requires_grad:
+                z.register_hook(bp.all_reduce)
+
+            if scg.get_bp_rank_in_group() == 0:
+                m = bias_dropout_residual(
+                    self.msa_att_row,
+                    m,
+                    self.msa_att_row(
+                        m, z=z, attn_mask=msa_row_attn_mask, chunk_size=chunk_size
+                    ),
+                    self.row_dropout_share_dim,
+                    self.msa_dropout,
+                    self.training,
+                )
+                if self._is_extra_msa_stack:
+                    m = residual(
+                        m, self.msa_att_col(m, mask=msa_mask, chunk_size=chunk_size),
+                        self.training
+                    )
+                else:
+                    m = bias_dropout_residual(
+                        self.msa_att_col,
+                        m,
+                        self.msa_att_col(m, attn_mask=msa_col_attn_mask, chunk_size=chunk_size),
+                        self.col_dropout_share_dim,
+                        self.msa_dropout,
+                        self.training,
+                    )
+                m = residual(
+                    m, self.msa_transition(m, chunk_size=chunk_size),
+                    self.training,
+                )
+                outer = self.outer_product_mean(m, mask=msa_mask, chunk_size=chunk_size)
+
+            if scg.get_bp_rank_in_group() == 1:
+
+                z = tri_mul_residual(
+                    self.tri_mul_out,
+                    z,
+                    self.tri_mul_out(z, mask=pair_mask, block_size=block_size),
+                    self.row_dropout_share_dim,
+                    self.pair_dropout,
+                    self.training,
+                    block_size=block_size,
+                )
+
+                z = tri_mul_residual(
+                    self.tri_mul_in,
+                    z,
+                    self.tri_mul_in(z, mask=pair_mask, block_size=block_size),
+                    self.row_dropout_share_dim,
+                    self.pair_dropout,
+                    self.training,
+                    block_size=block_size,
+                )
+
+                z = bias_dropout_residual(
+                    self.tri_att_start,
+                    z,
+                    self.tri_att_start(z, attn_mask=tri_start_attn_mask, chunk_size=chunk_size),
+                    self.row_dropout_share_dim,
+                    self.pair_dropout,
+                    self.training,
+                )
+
+                z = bias_dropout_residual(
+                    self.tri_att_end,
+                    z,
+                    self.tri_att_end(z, attn_mask=tri_end_attn_mask, chunk_size=chunk_size),
+                    self.col_dropout_share_dim,
+                    self.pair_dropout,
+                    self.training,
+                )
+                z = residual(
+                    z, self.pair_transition(z, chunk_size=chunk_size),
+                    self.training,
+                )
+                outer = torch.zeros_like(z)
+                outer.requires_grad = z.requires_grad
+
+            # Note(GuoxiaWang): z = residual(z, outer) in sync_evoformer_results
+            m, z = bp.sync_evoformer_results(outer, m, z, self.training)
+            z = z.clone()
+            m = m.clone()
+
         else:
+
+            if self.outer_product_mean_pos == 'first':
+                z = residual(
+                    z, self.outer_product_mean(m, mask=msa_mask, chunk_size=chunk_size),
+                    self.training
+                )
+
             m = bias_dropout_residual(
-                self.msa_att_col,
+                self.msa_att_row,
                 m,
-                self.msa_att_col(m, attn_mask=msa_col_attn_mask, chunk_size=chunk_size),
-                self.col_dropout_share_dim,
+                self.msa_att_row(
+                    m, z=z, attn_mask=msa_row_attn_mask, chunk_size=chunk_size
+                ),
+                self.row_dropout_share_dim,
                 self.msa_dropout,
                 self.training,
             )
-        m = residual(
-            m, self.msa_transition(m, chunk_size=chunk_size),
-            self.training
-        )
-        if not self.outer_product_mean_first:
+            if self._is_extra_msa_stack:
+                m = residual(
+                    m, self.msa_att_col(m, mask=msa_mask, chunk_size=chunk_size),
+                    self.training
+                )
+            else:
+                m = bias_dropout_residual(
+                    self.msa_att_col,
+                    m,
+                    self.msa_att_col(m, attn_mask=msa_col_attn_mask, chunk_size=chunk_size),
+                    self.col_dropout_share_dim,
+                    self.msa_dropout,
+                    self.training,
+                )
+            m = residual(
+                m, self.msa_transition(m, chunk_size=chunk_size),
+                self.training
+            )
+            if self.outer_product_mean_pos == 'middle' or self.outer_product_mean_pos == 'end':
+                outer = self.outer_product_mean(m, mask=msa_mask, chunk_size=chunk_size)
+
+            if self.outer_product_mean_pos == 'middle':
+                z = residual(z, outer, self.training)
+
+            z = tri_mul_residual(
+                self.tri_mul_out,
+                z,
+                self.tri_mul_out(z, mask=pair_mask, block_size=block_size),
+                self.row_dropout_share_dim,
+                self.pair_dropout,
+                self.training,
+                block_size=block_size,
+            )
+
+            z = tri_mul_residual(
+                self.tri_mul_in,
+                z,
+                self.tri_mul_in(z, mask=pair_mask, block_size=block_size),
+                self.row_dropout_share_dim,
+                self.pair_dropout,
+                self.training,
+                block_size=block_size,
+            )
+
+            z = bias_dropout_residual(
+                self.tri_att_start,
+                z,
+                self.tri_att_start(z, attn_mask=tri_start_attn_mask, chunk_size=chunk_size),
+                self.row_dropout_share_dim,
+                self.pair_dropout,
+                self.training,
+            )
+
+            z = bias_dropout_residual(
+                self.tri_att_end,
+                z,
+                self.tri_att_end(z, attn_mask=tri_end_attn_mask, chunk_size=chunk_size),
+                self.col_dropout_share_dim,
+                self.pair_dropout,
+                self.training,
+            )
+
             z = residual(
-                z, self.outer_product_mean(m, mask=msa_mask, chunk_size=chunk_size),
+                z, self.pair_transition(z, chunk_size=chunk_size),
                 self.training
             )
 
-        z = tri_mul_residual(
-            self.tri_mul_out,
-            z,
-            self.tri_mul_out(z, mask=pair_mask, block_size=block_size),
-            self.row_dropout_share_dim,
-            self.pair_dropout,
-            self.training,
-            block_size=block_size,
-        )
+            if self.outer_product_mean_pos == 'end':
+                z = residual(z, outer)
 
-        z = tri_mul_residual(
-            self.tri_mul_in,
-            z,
-            self.tri_mul_in(z, mask=pair_mask, block_size=block_size),
-            self.row_dropout_share_dim,
-            self.pair_dropout,
-            self.training,
-            block_size=block_size,
-        )
-
-        z = bias_dropout_residual(
-            self.tri_att_start,
-            z,
-            self.tri_att_start(z, attn_mask=tri_start_attn_mask, chunk_size=chunk_size),
-            self.row_dropout_share_dim,
-            self.pair_dropout,
-            self.training,
-        )
-
-        z = bias_dropout_residual(
-            self.tri_att_end,
-            z,
-            self.tri_att_end(z, attn_mask=tri_end_attn_mask, chunk_size=chunk_size),
-            self.col_dropout_share_dim,
-            self.pair_dropout,
-            self.training,
-        )
-        z = residual(
-            z, self.pair_transition(z, chunk_size=chunk_size),
-            self.training
-        )
         return m, z
 
 
@@ -227,7 +334,7 @@ class EvoformerStack(nn.Module):
         transition_n: int,
         msa_dropout: float,
         pair_dropout: float,
-        outer_product_mean_first: bool,
+        outer_product_mean_pos: bool,
         inf: float,
         eps: float,
         _is_extra_msa_stack: bool = False,
@@ -253,7 +360,7 @@ class EvoformerStack(nn.Module):
                     transition_n=transition_n,
                     msa_dropout=msa_dropout,
                     pair_dropout=pair_dropout,
-                    outer_product_mean_first=outer_product_mean_first,
+                    outer_product_mean_pos=outer_product_mean_pos,
                     inf=inf,
                     eps=eps,
                     _is_extra_msa_stack=_is_extra_msa_stack,
@@ -322,7 +429,7 @@ class ExtraMSAStack(EvoformerStack):
         transition_n: int,
         msa_dropout: float,
         pair_dropout: float,
-        outer_product_mean_first: bool,
+        outer_product_mean_pos: bool,
         inf: float,
         eps: float,
         **kwargs,
@@ -341,7 +448,7 @@ class ExtraMSAStack(EvoformerStack):
             transition_n=transition_n,
             msa_dropout=msa_dropout,
             pair_dropout=pair_dropout,
-            outer_product_mean_first=outer_product_mean_first,
+            outer_product_mean_pos=outer_product_mean_pos,
             inf=inf,
             eps=eps,
             _is_extra_msa_stack=True,
