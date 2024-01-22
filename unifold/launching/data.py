@@ -88,10 +88,19 @@ def parse_mmseqs_a3ms(result_dir, output_dir):
             with open(out_a3m_path, "a") as f:
                 f.write(line)
 
+def templates_exist_at_path(template_path):
+    if not osp.exists(template_path):   # no folder
+        return False
+    cifs = glob.glob(osp.join(template_path, "*.cif"))
+    if not len(cifs):   # no cif
+        print(f"no cif found in {template_path}. use null template.", flush=True)
+        return False
+    return True
+
 def get_template_features(
     a3m_path: str, template_path: str, query_sequence: str
 ) -> Dict[str, Any]:
-    if not osp.exists(template_path):   # no tmpl detected
+    if not templates_exist_at_path(template_path):   # no tmpl detected
         return get_null_template(query_sequence)
     template_featurizer = templates.HhsearchHitFeaturizer(
         mmcif_dir=template_path,
